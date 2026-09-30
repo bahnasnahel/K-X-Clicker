@@ -4,16 +4,15 @@ import { state, earn } from "./state.js";
 import { addSystem } from "./loop.js";
 import { emit, on } from "./events.js";
 import { sfx } from "./audio.js";
-import { toast } from "./toast.js";
 import { clamp } from "./util.js";
 import { makeTask, enqueue } from "./taskdata.js";
-import { tryAutomate } from "./workflows.js";
+import { tryAutomate, diffMult } from "./workflows.js";
 
 let spawnTimer = 0;
 
 export function isUnlocked(type) {
   const c = CONFIG.tasks[type];
-  return c.city <= state.city && state.hoursRun >= c.unlockHours;
+  return c.city <= state.city && (type === "relance" || !!state.flags[type]);
 }
 export const availableTypes = () => Object.keys(CONFIG.tasks).filter(isUnlocked);
 
@@ -34,8 +33,8 @@ function pickType() {
 }
 
 // Cree une tache : un workflow la prend ou elle rejoint la file manuelle.
-export function spawnTask(type, client = null) {
-  const t = makeTask(type || pickType(), client);
+export function spawnTask(type, client = null, d = 1) {
+  const t = makeTask(type || pickType(), client, d);
   if (tryAutomate(t)) return;
   if (!enqueue(t) && client) emit("taskLost", t);
 }
@@ -46,7 +45,7 @@ export function completeTask(id) {
   if (i < 0) return null;
   const task = state.queue[i];
   const cfg = CONFIG.tasks[task.type];
-  const gain = earn(cfg.euro, cfg.hours, manualMult());
+  const gain = earn(cfg.euro * diffMult(task.d), 0, manualMult());    // a la main : des euros, pas d'heures
   state.queue.splice(i, 1);
   state.stats.tasksDone++;
   emit("task", { task, auto: false, age: state.stats.playSeconds - task.born });
@@ -58,18 +57,7 @@ export function mistake() {
   sfx.error();
 }
 
-function checkUnlocks() {
-  for (const [k, c] of Object.entries(CONFIG.tasks)) {
-    if (!state.unlocked[k] && isUnlocked(k)) {
-      state.unlocked[k] = true;
-      toast("Nouveau type de tâche : " + c.label);
-      sfx.unlock();
-    }
-  }
-}
-
 function tick(dt) {
-  checkUnlocks();
   spawnTimer -= dt;
   if (spawnTimer <= 0) {
     spawnTask();

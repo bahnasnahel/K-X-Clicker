@@ -4,7 +4,7 @@ import { state, save, reset, deskLevel } from "./state.js";
 import { icon } from "./icons.js";
 import { sfx } from "./audio.js";
 import { setMuted } from "./audio.js";
-import { modal, confirmDialog } from "./modal.js";
+import { modal, confirmDialog, infoDialog } from "./modal.js";
 import { hitAttack } from "./crew.js";
 import { startTutorial } from "./tutorial.js";
 import { openCheat, cheatActive, cheatLabel } from "./cheat.js";
@@ -15,7 +15,8 @@ import team from "./tabs/team.js";
 import agency from "./tabs/agency.js";
 import success from "./tabs/success.js";
 
-const tabs = [tasks, workflows, clients, team, agency, success];
+const tabs = [tasks, clients, team, workflows, agency, success];
+const isVisible = (t) => t.id === "tasks" || !!state.flags[t.id];
 let current = "tasks";
 const panels = {}, buttons = {};
 const $ = (s) => document.querySelector(s);
@@ -36,6 +37,11 @@ export function initUI() {
     t.mount(p);
   }
   showTab(current, true);
+
+  // « ? » : explication courte de chaque compteur
+  document.querySelectorAll(".cnt").forEach((c) => {
+    c.onclick = () => { const [t, txt] = CONFIG.help[c.dataset.help]; sfx.tap(); infoDialog(t, `<p>${txt}</p>`, "Compris"); };
+  });
 
   $("#btn-sound").innerHTML = icon("sound", 22);
   $("#btn-gear").innerHTML = icon("gear", 22);
@@ -66,6 +72,7 @@ function syncSound() {
 
 export function showTab(id, silent) {
   current = id;
+  state.seen[id] = true;
   if (!silent) sfx.tab();
   for (const [k, b] of Object.entries(buttons)) b.classList.toggle("on", k === id);
   for (const [k, p] of Object.entries(panels)) p.hidden = k !== id;
@@ -81,15 +88,31 @@ export function updateUI() {
   set("hours", $("#c-hours"), fmtHours(state.hoursSaved));
   set("stress", $("#c-stress"), Math.round(state.stress) + " %");
   set("heat", $("#c-heat"), Math.round(state.heat) + " %");
+  $("#cell-hours").hidden = !state.flags.hours;
+  $("#stress-cell").hidden = !state.flags.stress;
+  $("#heat-cell").hidden = !state.flags.heat;
   $("#bar-stress").style.width = state.stress + "%";
   $("#bar-heat").style.width = state.heat + "%";
   $("#stress-cell").classList.toggle("hot", state.stress >= 100);
   $("#heat-cell").classList.toggle("hot", state.heat >= 80);
-  set("deskLabel", $("#desk-label"), `${CONFIG.prestige.cities[state.city]} · ${CONFIG.desk[deskLevel()].label}`);
+  set("deskLabel", $("#desk-label"), CONFIG.prestige.cities[state.city]);
+
+  // les onglets apparaissent au fur et a mesure ; la barre n'existe qu'a partir de deux onglets
+  let visible = 0;
+  for (const x of tabs) {
+    const v = isVisible(x);
+    if (v) visible++;
+    buttons[x.id].hidden = !v;
+    if (!v && current === x.id) showTab("tasks", true);
+  }
+  document.body.classList.toggle("notabs", visible <= 1);
 
   const t = tabs.find((x) => x.id === current);
   if (t) t.update(state);
-  for (const x of tabs) buttons[x.id].classList.toggle("badged", !!(x.badge && x.id !== current && x.badge()));
+  for (const x of tabs) {
+    if (!isVisible(x) || x.id === current) { buttons[x.id].classList.remove("badged"); continue; }
+    buttons[x.id].classList.toggle("badged", !state.seen[x.id] || !!(x.badge && x.badge()));
+  }
 
   const on = cheatActive();
   ui.cheat.classList.toggle("hidden", !on);

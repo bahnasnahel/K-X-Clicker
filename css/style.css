@@ -23,8 +23,11 @@ button{font:inherit;color:inherit;cursor:pointer}
 .iconbtn.off::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:3px;background:var(--m);transform:rotate(-45deg)}
 .desklabel{position:absolute;left:6px;bottom:4px;font:8px var(--px);color:var(--l);opacity:.75;text-shadow:1px 1px 0 var(--n1)}
 
-.counters{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--n2);border-bottom:3px solid var(--n3)}
-.cnt{padding:6px 4px 6px 8px;border-right:2px solid var(--n3);min-width:0;display:flex;flex-direction:column;gap:3px}
+.counters{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;background:var(--n2);border-bottom:3px solid var(--n3)}
+.cnt{position:relative;padding:6px 4px 6px 8px;border:0;border-right:2px solid var(--n3);background:none;color:inherit;text-align:left;min-width:0;min-height:54px;display:flex;flex-direction:column;gap:3px}
+.cnt[hidden]{display:none}
+.cnt .q{position:absolute;top:5px;right:5px;width:16px;height:16px;display:grid;place-items:center;font:700 10px var(--tx);font-style:normal;background:var(--n3);color:var(--l);border:1px solid var(--v)}
+.cnt:active{background:var(--n3)}
 .cnt:last-child{border-right:0}
 .cnt .lb{font-size:9px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cnt .val{font:11px var(--px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -63,8 +66,9 @@ h3.h{color:var(--or)}
 .person .st{font-size:11px;font-weight:600;opacity:.6;margin-top:2px;text-transform:uppercase;letter-spacing:.04em}
 
 /* ---- barre d'onglets ---- */
-#tabbar{flex:none;display:grid;grid-template-columns:repeat(6,1fr);background:var(--n2);border-top:3px solid var(--n3);padding-bottom:env(safe-area-inset-bottom)}
-.tab{min-height:56px;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 0;background:none;border:0;color:#8f7fc4;font:600 10px var(--tx);position:relative}
+#tabbar{flex:none;display:flex;background:var(--n2);border-top:3px solid var(--n3);padding-bottom:env(safe-area-inset-bottom)}
+.tab[hidden]{display:none}
+.tab{flex:1;min-height:56px;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 0;background:none;border:0;color:#8f7fc4;font:600 10px var(--tx);position:relative}
 .tab.on{color:var(--l);background:var(--n3)}
 .tab.on::before{content:"";position:absolute;top:0;left:12%;right:12%;height:3px;background:var(--m)}
 .ico{display:block}
@@ -243,3 +247,47 @@ h3.h{color:var(--or)}
 .segbtn{min-height:44px;background:var(--n3);border:2px solid var(--n3);font:10px var(--px);color:var(--l);padding:0}
 .segbtn.on{background:var(--m);border-color:var(--l);color:var(--n1)}
 .modal{max-height:92dvh;overflow-y:auto}
+
+/* ---- debut de partie : pas de barre d'onglets tant qu'il n'y a qu'un onglet ---- */
+body.notabs #tabbar{display:none}
+body.notabs #bubbles,body.notabs .alert{bottom:calc(14px + env(safe-area-inset-bottom))}
+
+/* ---- automatisation, clients, equipe (simplifies) ---- */
+.wflevel{font-size:14px;font-weight:700;margin-bottom:6px}
+.wfcard .btn{margin-top:10px}
+.toggle{display:flex;gap:10px;align-items:center;width:100%;min-height:52px;text-align:left;background:var(--n1);border:2px solid var(--n3);padding:8px 10px;margin-top:8px}
+.toggle i{flex:none;width:36px;height:20px;background:var(--n3);border:2px solid var(--v);position:relative}
+.toggle i::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;background:var(--l)}
+.toggle.on i{background:var(--v)} .toggle.on i::after{left:16px;background:var(--n1)}
+.toggle b{display:block;font-size:13px} .toggle small{display:block;font-size:12px;opacity:.75;margin-top:2px}
+.warn{margin:10px 0 0;font-size:13px;color:#ff9db0;line-height:1.4}
+.dpill{white-space:nowrap;flex:none;margin-left:auto;font:8px var(--px);padding:5px 7px;background:var(--m);color:var(--n1)}
+.helpbtn{flex:none;width:44px;height:44px;margin:-10px -10px -10px 0;background:none;border:0;padding:0;display:grid;place-items:center}
+.helpbtn i{display:grid;place-items:center;width:22px;height:22px;background:var(--n3);border:2px solid var(--v);color:var(--l);font:700 12px var(--tx);font-style:normal}
+.credcard{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+.credhead{display:flex;justify-content:space-between;align-items:center;min-height:24px}
+.credhead b{font:10px var(--px)} .credval{font:10px var(--px);margin-left:auto;margin-right:12px}
+.fin{font-size:12px;opacity:.8}
+.need{font-size:12px}
+.serv.good{color:var(--l)} .serv.mid{color:var(--m)} .serv.bad{color:#ff7a93}
+.staffrow{display:flex;gap:6px;align-items:center;min-height:30px}
+.staffrow em{font-size:12px;opacity:.6}
+.frame.mini{width:30px;height:30px;padding:1px;border-width:2px;box-shadow:none}
+.frame.ini{display:grid;place-items:center}
+.frame.ini b{font:15px var(--px);color:var(--n1)}
+.frame.mini.ini b{font-size:9px}
+.frame.ini.tier1{background:#b9a3ee} .frame.ini.tier2{background:#9A6BFF} .frame.ini.tier3{background:#D36BFF} .frame.ini.tier4{background:#ECE6FA} .frame.ini.tier5{background:#FFD479}
+.emp{display:flex;gap:12px;align-items:center}
+.emp .pt{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.emp .btn{flex:none}
+.optrow{display:flex;gap:10px;align-items:center}
+.optrow .frame{width:44px;height:44px}
+.cinfo .serv,.cinfo .need{font-size:12px;line-height:1.35}
+.bubble{pointer-events:auto;cursor:pointer}
+.emp .frame{width:56px;height:56px}
+.emp .frame.ini b{font-size:12px}
+.emp .nm{font:10px/1.4 var(--px);color:var(--l)}
+.emp .rl{font-size:12px;font-weight:600;color:var(--m)}
+.emp .fx{font-size:12px;color:var(--l)}
+.emp .ds{font-size:12px;opacity:.8}
+.emp .small-btn{min-width:84px}

@@ -29,8 +29,9 @@ function makeData(type) {
   }
 }
 
-export function makeTask(type, client = null) {
-  return { id: state.nextTaskId++, type, client, born: state.stats.playSeconds, data: makeData(type) };
+// d = difficulte : une automatisation de niveau inferieur ne peut pas la traiter
+export function makeTask(type, client = null, d = 1) {
+  return { id: state.nextTaskId++, type, client, d, born: state.stats.playSeconds, data: makeData(type) };
 }
 
 export const queueLimit = () => CONFIG.queue.capacity * CONFIG.queue.hardCapMult;

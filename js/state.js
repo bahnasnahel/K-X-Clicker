@@ -5,22 +5,27 @@ export function defaults() {
   return {
     v: CONFIG.save.version,
     money: 0,
-    hoursSaved: 0,        // heures gagnees disponibles (se depensent en blocs)
-    hoursRun: 0,          // heures gagnees dans l'agence courante (progression, prestige)
+    hoursSaved: 0,        // heures gagnees disponibles : viennent UNIQUEMENT de l'automatisation
+    hoursRun: 0,          // heures gagnees dans l'agence courante (prestige)
     lifetimeHours: 0,     // toutes agences confondues
+    runMoney: 0,          // argent gagne dans l'agence courante (deblocage des employes)
     stress: 0,
     heat: 0,
     city: 0,
     reputation: 0,
+    credibility: CONFIG.credibility.start,
     bonusMult: 0,         // bonus permanent des succes
     queue: [],
     nextTaskId: 1,
     nextClientId: 1,
-    unlocked: { facture: true, relance: true, excel: false, rapport: false, devis: false, contrat: false },
+    flags: {},            // contenu debloque (onglets, types de taches, compteurs, directeurs)
+    seen: {},             // onglets deja ouverts
     offers: [],
     clients: [],
-    workflows: {},        // par type de tache
-    blocks: {},           // id de bloc -> niveau
+    auto: {},             // automatisation par type de tache
+    staff: [],            // ids des employes embauches (data/employees.json)
+    assign: {},           // id du membre du personnel -> id du client
+    autoAssign: true,
     servers: 0,
     attack: null,
     team: {
@@ -33,7 +38,7 @@ export function defaults() {
     stats: {
       tasksDone: 0, autoDone: 0, playSeconds: 0, bugs: 0, cleanSince: null,
       attacksRepelled: 0, windowsOpened: 0, clientsSigned: 0, clientsSatisfied: 0,
-      moneyEarned: 0,
+      moneyEarned: 0, lawsuits: 0,
     },
     settings: { muted: false, tutorialDone: false, speed: 1, gain: 1 },   // speed et gain : mode triche
     meta: { created: now, lastSave: now, lastActive: now },
@@ -54,10 +59,7 @@ function assign(target, src) {
   }
 }
 
-export function normalize() {
-  state.blocks.t_mail ||= 1;
-  state.blocks.a_basic ||= 1;
-}
+export function normalize() {}
 
 export function load() {
   try {
@@ -115,16 +117,15 @@ export function earn(euro, hours, extra = 1) {
   const m = gainMult() * extra;
   const e = euro * m, h = hours * m;
   state.money += e;
-  state.hoursSaved += h;
-  state.hoursRun += h;
-  state.lifetimeHours += h;
+  state.runMoney += e;
   state.stats.moneyEarned += e;
+  if (h > 0) { state.hoursSaved += h; state.hoursRun += h; state.lifetimeHours += h; }
   return { euro: e, hours: h };
 }
 
-// niveau du bureau (nombre d'ecrans) selon les heures gagnees dans l'agence
+// niveau du bureau (nombre d'ecrans) selon le nombre d'employes
 export function deskLevel() {
   let lvl = 0;
-  CONFIG.desk.forEach((d, i) => { if (state.hoursRun >= d.minHours) lvl = i; });
+  CONFIG.desk.forEach((d, i) => { if (state.staff.length >= d.minStaff) lvl = i; });
   return lvl;
 }

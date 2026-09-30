@@ -1,34 +1,71 @@
-import { el, fmt, fmt2, liveView, setText } from "../util.js";
+import { el, fmt, fmt1, fmt2, liveView, setText } from "../util.js";
 import { CONFIG } from "../config.js";
 import { state } from "../state.js";
 import { icon } from "../icons.js";
 import { sfx } from "../audio.js";
-import { maxClients, signOffer, dropOffer, clientIncome, incomePerSec, payFactor } from "../clients.js";
+import { modal, infoDialog } from "../modal.js";
+import { avatar } from "../avatar.js";
+import { signOffer, clientIncome, incomePerSec, previewService } from "../clients.js";
+import { staffList, assignedTo, timeGiven, skillGiven, service, assign, autoAssign, payroll } from "../staff.js";
 
 const types = (list) => list.map((t) => `<span class="t-${t}">${icon(t, 16)}</span>`).join("");
 const mood = (s) => (s >= 75 ? "Satisfait" : s >= 45 ? "Correct" : s >= 20 ? "Mécontent" : "Va résilier");
+const pct = (v) => Math.round(v * 100) + " %";
+const servClass = (v) => (v >= 0.9 ? "good" : v >= 0.6 ? "mid" : "bad");
+
+function assignDialog(c) {
+  modal((box, close) => {
+    box.append(el("h3", "h", `Affecter à ${c.name}`));
+    box.append(el("p", "muted small", `Besoin : ${c.need.time} h de temps et niveau ${c.need.skill}. Touche une personne pour l'affecter ou la retirer.`));
+    for (const p of staffList()) {
+      const cur = state.assign[p.id], here = cur === c.id;
+      const other = cur && !here ? state.clients.find((x) => x.id === cur) : null;
+      const b = el("button", "opt-block" + (here ? " cur" : ""),
+        `<span class="optrow">${avatar(p)}<span><b>${p.name || p.title}</b><span>${p.title} · ${p.time} h · niveau ${p.skill}${other ? " · chez " + other.name : here ? " · affecté ici" : ""}</span></span></span>`);
+      b.onclick = () => { assign(p.id, c.id); sfx.ok(); close(); };
+      box.append(b);
+    }
+    const cl = el("button", "btn", "Fermer"); cl.onclick = () => close(); box.append(cl);
+  });
+}
 
 export default {
   id: "clients", label: "Clients", icon: "clients",
-  badge: () => state.offers.length > 0 && state.clients.length < maxClients(),
+  badge: () => state.offers.length > 0,
   mount(root) {
-    const sig = () => JSON.stringify([state.offers.map((o) => o.id), state.clients.map((c) => c.id), state.clients.length >= maxClients()]);
+    const sig = () => JSON.stringify([state.offers.map((o) => o.id), state.clients.map((c) => c.id), state.autoAssign, state.assign, state.staff]);
     this.view = liveView(root, sig, (r, live) => {
+      const help = el("button", "helpbtn", "<i>?</i>"); help.setAttribute("aria-label", "Aide : crédibilité");
+      help.onclick = () => { const [t, txt] = CONFIG.help.credibility; infoDialog(t, `<p>${txt}</p>`, "Compris"); };
       const head = el("div", "qhead", `<h2 class="h">Clients</h2><span class="qcount"></span>`);
       const cnt = head.querySelector(".qcount");
-      live(() => setText(cnt, `${state.clients.length} / ${maxClients()}`));
-      const inc = el("p", "income");
-      live(() => setText(inc, `Revenus passifs : ${fmt2(incomePerSec())} EUR / s`));
-      r.append(head, inc);
+      live(() => setText(cnt, `${state.clients.length} client${state.clients.length > 1 ? "s" : ""}`));
+      r.append(head);
+
+      const cred = el("div", "card credcard");
+      cred.innerHTML = `<div class="credhead"><b>Crédibilité</b><span class="credval"></span></div><i class="bar"><b></b></i><div class="fin"></div>`;
+      cred.querySelector(".credhead").append(help);
+      const cb = cred.querySelector(".bar b"), cv = cred.querySelector(".credval"), fin = cred.querySelector(".fin");
+      live(() => {
+        const v = state.credibility;
+        cb.style.width = v + "%"; cb.style.background = v >= 50 ? "var(--v)" : v >= 25 ? "var(--m)" : "#ff5d7a";
+        setText(cv, Math.round(v) + " %");
+        setText(fin, `Abonnements +${fmt2(incomePerSec())} EUR/s · Salaires −${fmt2(payroll())} EUR/s`);
+      });
+      r.append(cred);
+
+      const at = el("button", "toggle" + (state.autoAssign ? " on" : ""), `<i></i><span><b>Affectation automatique ${state.autoAssign ? "activée" : "désactivée"}</b><small>${state.autoAssign ? "Le jeu répartit ton équipe entre les clients." : "Tu choisis qui travaille pour quel client."}</small></span>`);
+      at.onclick = () => { state.autoAssign = !state.autoAssign; if (state.autoAssign) autoAssign(); sfx.tap(); };
+      r.append(at);
 
       r.append(el("p", "qlabel", "Demandes de clients"));
       if (!state.offers.length) r.append(el("p", "muted", "Aucune demande pour le moment. De nouveaux clients arrivent régulièrement."));
       for (const o of state.offers) {
-        const sec = CONFIG.sectors[o.sector], full = state.clients.length >= maxClients();
+        const sec = CONFIG.sectors[o.sector], sv = previewService(o);
         const c = el("div", "card client offer");
-        c.append(el("div", "cinfo", `<b>${o.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[o.size].label}</span><span class="ctasks">${types(o.types)}</span><span class="gold">${fmt2(o.pay)} EUR / s</span>`));
-        const b = el("button", "btn small-btn", full ? "Agence<br>pleine" : "Signer");
-        b.disabled = full;
+        c.append(el("div", "cinfo", `<b>${o.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[o.size].label}</span><span class="ctasks">${types(o.types)}</span>
+          <span class="need">Besoin : ${o.need.time} h · niveau ${o.need.skill}</span><span class="serv ${servClass(sv)}">Service estimé avec ton équipe libre : ${pct(sv)}</span><span class="gold">${fmt2(o.pay)} EUR / s</span>`));
+        const b = el("button", "btn small-btn", "Signer");
         b.onclick = () => signOffer(o.id);
         c.append(b);
         r.append(c);
@@ -38,15 +75,22 @@ export default {
       if (!state.clients.length) r.append(el("p", "muted", "Signe ton premier client pour des revenus passifs."));
       for (const cl of state.clients) {
         const sec = CONFIG.sectors[cl.sector];
+        const who = assignedTo(cl.id);
         const c = el("div", "card client");
         c.innerHTML = `<div class="cinfo"><b>${cl.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[cl.size].label}</span><span class="ctasks">${types(cl.types)}</span>
-          <i class="bar sat"><b></b></i><span class="satline"></span></div>`;
-        const bar = c.querySelector(".sat b"), line = c.querySelector(".satline");
+          <span class="need"></span><i class="bar svc"><b></b></i><span class="satline"></span>
+          <span class="staffrow">${who.map((p) => avatar(p, "mini")).join("") || "<em>Personne d'affecté</em>"}</span></div>`;
+        const b = el("button", "btn small-btn", "Affecter");
+        b.onclick = () => assignDialog(cl);
+        c.append(b);
+        const need = c.querySelector(".need"), bar = c.querySelector(".svc b"), line = c.querySelector(".satline");
         live(() => {
-          const s = cl.sat;
-          bar.style.width = s + "%";
-          bar.style.background = s >= 50 ? "var(--v)" : s >= 25 ? "var(--m)" : "#ff5d7a";
-          setText(line, `${mood(s)} · ${Math.round(s)} % · ${fmt2(clientIncome(cl))} EUR / s`);
+          const sv = service(cl);
+          setText(need, `Temps ${fmt1(timeGiven(cl))}/${cl.need.time} h · niveau ${skillGiven(cl)}/${cl.need.skill} · service ${pct(sv)}`);
+          need.className = "need serv " + servClass(sv);
+          bar.style.width = sv * 100 + "%";
+          bar.style.background = sv >= 0.9 ? "var(--v)" : sv >= 0.6 ? "var(--m)" : "#ff5d7a";
+          setText(line, `${mood(cl.sat)} · ${Math.round(cl.sat)} % · ${fmt2(clientIncome(cl))} EUR/s`);
         });
         r.append(c);
       }

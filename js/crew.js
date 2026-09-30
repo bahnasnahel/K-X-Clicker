@@ -7,12 +7,12 @@ import { sfx } from "./audio.js";
 import { toast } from "./toast.js";
 import { bubble } from "./bubbles.js";
 import { clamp } from "./util.js";
-import { activeTypes, activeCount, wf } from "./workflows.js";
+import { activeTypes, activeCount, auto } from "./workflows.js";
 import { deskFx } from "./render.js";
 
 const T = CONFIG.team;
 export const member = (id) => state.team[id];
-export const isVisible = (id) => id === "nahel" || state.hoursRun >= T[id].unlockHours || state.team[id].on;
+export const isVisible = (id) => id === "nahel" || !!state.flags["dir_" + id] || state.team[id].on;
 export const upgradeCost = (id) => Math.round(T[id].upgrade.base * Math.pow(T[id].upgrade.growth, state.team[id].lvl));
 
 export function recruit(id) {
@@ -85,14 +85,14 @@ function attackTick() {
   if (state.attack) {
     if (now >= state.attack.deadline) {
       const t = state.attack.type;
-      wf(t).pausedUntil = now + A.pauseSec;
+      auto(t).pausedUntil = now + A.pauseSec;
       state.attack = null;
       sfx.error();
       toast(`Attaque réussie : le workflow « ${CONFIG.tasks[t].label} » est en pause.`);
     }
     return;
   }
-  if (state.hoursRun < A.startHours || now < nextAttack) return;
+  if (state.stats.autoDone < A.startAutoDone || now < nextAttack) return;
   const targets = activeTypes();
   if (!targets.length) return;
   nextAttack = now + A.everySec * (0.7 + Math.random() * 0.6);

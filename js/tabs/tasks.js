@@ -1,11 +1,11 @@
-import { el, fmt, fmtHours } from "../util.js";
+import { el, fmt } from "../util.js";
 import { CONFIG } from "../config.js";
 import { state } from "../state.js";
 import { sfx } from "../audio.js";
 import { icon } from "../icons.js";
 import { completeTask, mistake, holdMs } from "../tasks.js";
 import { findClient } from "../clients.js";
-import { activeTypes, wf, status } from "../workflows.js";
+import { activeTypes, auto, status } from "../workflows.js";
 
 const HINT = {
   drag:   "Glisse la facture vers le bon dossier.",
@@ -28,7 +28,7 @@ function finish(t, node) {
   const i = state.queue.length ? 0 : -1;
   focusId = i >= 0 ? state.queue[0].id : null;
   stageId = null;
-  const f = el("div", "float", `+${fmt(gain.euro)} EUR<small>+${fmtHours(gain.hours)} h</small>`);
+  const f = el("div", "float", `+${fmt(gain.euro)} EUR`);
   fx.append(f);
   setTimeout(() => f.remove(), 900);
   if (node) node.classList.add("ok");
@@ -156,7 +156,7 @@ function buildStage(t) {
   }
   const cfg = CONFIG.tasks[t.type];
   stage.append(
-    el("div", "stitle", `<span class="t-${t.type}">${icon(t.type, 20)}</span><span>${cfg.label}</span>`),
+    el("div", "stitle", `<span class="t-${t.type}">${icon(t.type, 20)}</span><span>${cfg.label}</span>${t.d > 1 ? `<span class="dpill">Difficulté ${t.d}</span>` : ""}`),
     el("p", "shint", t.client != null && findClient(t.client) ? `Pour ${findClient(t.client).name}. ${HINT[cfg.gesture]}` : HINT[cfg.gesture]),
     BUILD[cfg.gesture](t)
   );
@@ -193,7 +193,7 @@ export default {
     capEl.classList.toggle("over", q.length > cap);
 
     const at = activeTypes();
-    const autoTxt = at.length ? "Traité automatiquement : " + at.map((k) => `${CONFIG.tasks[k].label.split(" ")[0]} (${wf(k).backlog.length}${status(k) === "ok" ? "" : ", arrêté"})`).join(" · ") : "";
+    const autoTxt = at.length ? "Automatisé : " + at.map((k) => `${CONFIG.tasks[k].label.split(" ")[0]} (${auto(k).backlog.length}${status(k) === "ok" ? "" : ", arrêté"})`).join(" · ") : "";
     if (autoEl.textContent !== autoTxt) autoEl.textContent = autoTxt;
 
     const sig = q.map((t) => t.id).join(",") + "|" + focusId;

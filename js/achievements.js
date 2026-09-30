@@ -4,7 +4,7 @@ import { state } from "./state.js";
 import { addSystem } from "./loop.js";
 import { sfx } from "./audio.js";
 import { toast } from "./toast.js";
-import { activeCount, activeTypes, hasCheck } from "./workflows.js";
+import { activeCount } from "./workflows.js";
 
 const team = () => state.team;
 const COND = {
@@ -18,8 +18,8 @@ const COND = {
   all_types:    () => activeCount() >= 4,
   no_bug_5:     (s) => s.stats.cleanSince != null && s.stats.playSeconds - s.stats.cleanSince >= CONFIG.zeroBugSec,
   first_bug:    (s) => s.stats.bugs >= 1,
-  checked:      () => activeTypes().some(hasCheck),
-  first_hire:   () => ["yanis", "jadd", "noah"].some((k) => team()[k].on),
+  staff_5:      (s) => s.staff.length >= 5,
+  first_hire:   (s) => s.staff.length >= 1,
   full_team:    () => ["yanis", "jadd", "noah"].every((k) => team()[k].on),
   firewall:     (s) => s.stats.attacksRepelled >= 10,
   fresh_air:    (s) => s.stats.windowsOpened >= 10,

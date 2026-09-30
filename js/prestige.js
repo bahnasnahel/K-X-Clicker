@@ -13,7 +13,8 @@ export const threshold = () => P.thresholds[state.city];
 export const canOpen = () => state.hoursRun >= threshold();
 export const repGain = () => Math.max(1, Math.floor(state.hoursRun / P.repPerHours));
 
-const RESET = ["money", "hoursSaved", "hoursRun", "stress", "heat", "queue", "unlocked", "offers", "clients", "workflows", "servers", "attack"];
+// on garde : direction (Nahel, Yanis, Jadd, Noah), succes, deblocages, reputation
+const RESET = ["money", "hoursSaved", "hoursRun", "runMoney", "stress", "heat", "queue", "offers", "clients", "auto", "staff", "assign", "servers", "attack", "credibility"];
 
 export function openAgency() {
   if (!canOpen()) return false;

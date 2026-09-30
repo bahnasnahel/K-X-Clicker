@@ -1,15 +1,16 @@
 // Service worker K'X Clicker : jeu complet hors ligne.
 // A CHAQUE MISE EN LIGNE, incremente VERSION pour forcer la mise a jour.
-const VERSION = "v5-0001";
+const VERSION = "v6-0001";
 const CACHE = "kx-" + VERSION;
 
 const FILES = [
   "./", "index.html", "manifest.webmanifest",
   "css/style.css",
   "js/main.js", "js/config.js", "js/util.js", "js/state.js", "js/loop.js", "js/audio.js", "js/events.js", "js/modal.js",
-  "js/icons.js", "js/render.js", "js/ui.js", "js/toast.js", "js/bubbles.js", "js/tutorial.js", "js/offline.js", "js/cheat.js",
+  "js/icons.js", "js/render.js", "js/ui.js", "js/toast.js", "js/bubbles.js", "js/tutorial.js", "js/offline.js", "js/cheat.js", "js/data.js", "js/unlocks.js", "js/staff.js", "js/lawsuit.js", "js/avatar.js",
   "js/taskdata.js", "js/tasks.js", "js/workflows.js", "js/clients.js", "js/crew.js", "js/prestige.js", "js/achievements.js",
   "js/tabs/tasks.js", "js/tabs/workflows.js", "js/tabs/clients.js", "js/tabs/team.js", "js/tabs/agency.js", "js/tabs/success.js",
+  "data/employees.json", "data/directors.json",
   "assets/fonts/press-start-2p.woff2", "assets/fonts/inter.woff2",
   "assets/photos/nahel.webp", "assets/photos/yanis.webp", "assets/photos/noah.webp", "assets/photos/jadd.webp",
   "assets/icons/icon-192.png", "assets/icons/icon-512.png", "assets/icons/icon-maskable-512.png",

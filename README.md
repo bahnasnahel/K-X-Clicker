@@ -16,6 +16,12 @@ Sur téléphone : ouvre le lien, puis menu du navigateur > « Ajouter à l'écra
 **À chaque mise en ligne**, incrémente `VERSION` dans `sw.js`, sinon les téléphones gardent l'ancienne version en cache.
 Si tu ajoutes un fichier, ajoute-le aussi à la liste `FILES` de `sw.js`.
 
+## Ajouter un employé
+Ouvre `data/employees.json`, copie une ligne et change l'`id` (unique), le `prenom`, le `nom`, le `titre` et les valeurs
+(`time` = heures de travail apportées, `skill` = niveau de compétence 1 à 10, `hire` = coût d'embauche, `salary` = salaire en EUR/s,
+`minRunMoney` et `minCity` = quand il est proposé). L'identité des 4 directeurs est dans `data/directors.json`.
+Ajoute aussi le fichier à la liste `FILES` de `sw.js` si tu crées un nouveau fichier de données.
+
 ## Équilibrage
 **Toutes** les valeurs (prix, gains, durées, seuils, textes des tâches, succès, tutoriel) sont dans `js/config.js`.
 Repères : seuil d'ouverture d'une agence dans `prestige.thresholds` (heures gagnées), cadence des clients dans `clients` et `sizes`,
@@ -26,13 +32,15 @@ Réglages (engrenage) > « Mode triche (tests) » : vitesse du jeu x1 à x50, mu
 
 ## Mode test (console)
 Ajoute `?debug` à l'adresse : `window.kx` donne accès à `state`, `CONFIG` et `runSystems(dt)` dans la console
-(ex. `kx.state.money = 5000`, `kx.state.hoursRun = 200`, ou `for (let i=0;i<600;i++) kx.runSystems(0.1)` pour avancer de 60 s).
+(ex. `kx.state.money = 5000`, `kx.state.hoursRun = 200`, `kx.state.credibility = 10`, ou `for (let i=0;i<600;i++) kx.runSystems(0.1)` pour avancer de 60 s).
 
 ## Structure
 - `js/config.js` équilibrage et textes, `js/state.js` état + sauvegarde + gains, `js/loop.js` boucle à pas fixe
-- `js/tasks.js` file de tâches, `js/taskdata.js` création des tâches, `js/tabs/tasks.js` les 5 gestes
-- `js/workflows.js` blocs, cadence, bugs, automatisation, `js/tabs/workflows.js` éditeur
-- `js/clients.js` demandes, abonnements, satisfaction, `js/offline.js` gains hors ligne
-- `js/crew.js` équipe, chaleur, fenêtres de Jadd, attaques, `js/prestige.js` agences, `js/achievements.js` succès
+- `js/tasks.js` file de tâches, `js/taskdata.js` création des tâches (avec difficulté), `js/tabs/tasks.js` les 5 gestes
+- `js/workflows.js` automatisation par niveaux, bugs, `js/tabs/workflows.js` l'onglet Workflows
+- `js/clients.js` demandes, abonnements, service, crédibilité, `js/lawsuit.js` procès, `js/offline.js` gains hors ligne
+- `js/staff.js` employés, temps et compétence, affectation, salaires, `js/data.js` chargement de `data/`
+- `js/unlocks.js` progression : onglets et contenus qui apparaissent au fur et à mesure
+- `js/crew.js` directeurs, chaleur, fenêtres de Jadd, attaques, `js/prestige.js` agences, `js/achievements.js` succès
 - `js/render.js` bureau pixel (canvas), `js/ui.js` interface, `js/bubbles.js` + `js/tutorial.js` bulles avec photos, `js/audio.js` sons
 - `js/events.js` bus d'événements entre modules (ajouter une ville ou un événement ne demande pas de toucher aux autres)

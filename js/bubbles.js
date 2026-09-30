@@ -15,6 +15,7 @@ export function bubble(who, text, ms = 3800) {
   active = who; activeUntil = Date.now() + ms;
   const b = el("div", "bubble", `${portrait(who, "active")}<p><b>${CONFIG.team[who].name}</b>${text}</p>`);
   while (box.children.length >= 2) box.firstChild.remove();
+  b.onclick = () => b.remove();            // un tap ferme la bulle
   box.append(b);
   setTimeout(() => b.remove(), ms);
 }

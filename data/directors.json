@@ -1,0 +1,9 @@
+{
+  "_aide": "Identité des 4 directeurs. Le gameplay de chacun est dans js/config.js (team). Les photos sont dans assets/photos/<id>.webp.",
+  "directors": [
+    { "id": "nahel", "prenom": "Nahel", "nom": "",       "titre": "Fondateur, sur le terrain" },
+    { "id": "yanis", "prenom": "Yanis", "nom": "",       "titre": "Fondateur tech" },
+    { "id": "jadd",  "prenom": "Jadd",  "nom": "Barnas", "titre": "Ingénieur ouvreur de fenêtres" },
+    { "id": "noah",  "prenom": "Noah",  "nom": "",       "titre": "Cybersécurité" }
+  ]
+}

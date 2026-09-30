@@ -28,7 +28,7 @@ export default {
       r.append(el("p", "muted", isLastCity()
         ? "Paris est la dernière ville de la V1. Tu peux la rouvrir pour gagner de la réputation. D'autres villes arriveront plus tard."
         : P.news[nextCity()]));
-      r.append(el("p", "muted", `On repart de zéro (clients, workflows, argent). On garde l'équipe, les blocs, les succès et la réputation. Réputation gagnée en ouvrant maintenant : +${repGain()}. Chaque point : +${Math.round(P.repBonus * 100)} % de gains, clients plus gros et plus rapides.`));
+      r.append(el("p", "muted", `On repart de zéro (clients, employés, automatisations, argent). On garde la direction, les succès et la réputation. Réputation gagnée en ouvrant maintenant : +${repGain()}. Chaque point : +${Math.round(P.repBonus * 100)} % de gains, clients plus gros et plus rapides.`));
 
       const b = el("button", "btn big", isLastCity() ? "Rouvrir l'agence" : `Ouvrir K'X ${cityName(nextCity())}`);
       b.disabled = !canOpen();
