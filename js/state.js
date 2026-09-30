@@ -12,6 +12,8 @@ function defaults() {
     city: 0,
     reputation: 0,
     queue: [],
+    nextTaskId: 1,
+    unlocked: { facture: true, relance: true, excel: false, rapport: false },
     clients: [],
     workflows: [],
     team: { nahel: true, yanis: false, noah: false, jadd: false },

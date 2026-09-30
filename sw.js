@@ -1,13 +1,13 @@
 // Service worker K'X Clicker : jeu complet hors ligne.
 // A CHAQUE MISE EN LIGNE, incremente VERSION pour forcer la mise a jour.
-const VERSION = "v2-0001";
+const VERSION = "v3-0001";
 const CACHE = "kx-" + VERSION;
 
 const FILES = [
   "./", "index.html", "manifest.webmanifest",
   "css/style.css",
   "js/main.js", "js/config.js", "js/util.js", "js/state.js", "js/loop.js", "js/audio.js",
-  "js/icons.js", "js/render.js", "js/ui.js",
+  "js/icons.js", "js/render.js", "js/ui.js", "js/tasks.js", "js/toast.js",
   "js/tabs/stub.js", "js/tabs/tasks.js", "js/tabs/team.js",
   "assets/fonts/press-start-2p.woff2", "assets/fonts/inter.woff2",
   "assets/photos/nahel.webp", "assets/photos/yanis.webp", "assets/photos/noah.webp", "assets/photos/jadd.webp",
