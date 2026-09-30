@@ -1,13 +1,15 @@
 // Progression : le contenu apparait au fur et a mesure. Chaque deblocage met le jeu en pause avec
-// une explication, puis on laisse jouer (unlockGapSec) avant la suivante.
+// une explication. Le rythme se fait au nombre de taches (pas au temps).
 import { CONFIG } from "./config.js";
 import { state } from "./state.js";
 import { addSystem } from "./loop.js";
 import { explain } from "./tutorial.js";
+import { prefillForNextGoal } from "./tasks.js";
 
 export const has = (id) => !!state.flags[id];
 
-let acc = 0, lastAt = -1e9, busy = false;
+let acc = 0, lastActs = -1e9, busy = false;
+const acts = () => state.stats.tasksDone + state.stats.autoDone;   // actions du joueur
 function tick(dt) {
   acc += dt;
   if (acc < 0.5 || busy) return;
@@ -15,18 +17,17 @@ function tick(dt) {
   if (document.querySelector(".tuto, .overlay")) return;                   // une fenetre est deja ouverte
   for (const u of CONFIG.unlocks) {
     if (state.flags[u.id] || !u.when(state)) continue;
-    if (state.stats.playSeconds - lastAt < (u.gap ?? CONFIG.unlockGapSec)) break;   // on laisse jouer un peu
+    if (acts() - lastActs < CONFIG.unlockGapTasks) break;                  // au moins une tache entre deux explications
     state.flags[u.id] = true;
-    lastAt = state.stats.playSeconds;
     busy = true;
-    explain(u.who, u.text, { title: u.title }).then(() => { busy = false; lastAt = state.stats.playSeconds; });
+    explain(u.who, u.text, { title: u.title }).then(() => { busy = false; lastActs = acts(); prefillForNextGoal(); });
     break;                                                                 // une seule explication a la fois
   }
 }
 
 // Sauvegarde chargee : ce qui est deja vrai est debloque sans explication.
 export function initUnlocks() {
-  lastAt = state.stats.playSeconds;
+  lastActs = acts();
   for (const u of CONFIG.unlocks) if (!state.flags[u.id] && state.stats.tasksDone > 0 && u.when(state)) state.flags[u.id] = true;
   addSystem(tick);
 }

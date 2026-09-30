@@ -73,8 +73,20 @@ function tick(dt) {
   state.stress = clamp(state.stress, 0, CONFIG.stress.max);
 }
 
+// Palier suivant du tutoriel : on genere d'un coup toutes les taches necessaires sauf la derniere,
+// sans depasser la capacite de la boite (pas de stress). Le joueur n'attend qu'une fois.
+export function prefillForNextGoal() {
+  const goals = CONFIG.unlocks.filter((u) => !state.flags[u.id] && u.tasks).map((u) => u.tasks);
+  if (!goals.length) return;
+  const goal = Math.min(...goals), left = goal - state.stats.tasksDone;
+  if (left > CONFIG.prefillWithin) return;
+  const n = Math.min(left - state.queue.length - 1, CONFIG.queue.capacity - state.queue.length);
+  for (let i = 0; i < n; i++) spawnTask();
+}
+
 export function initTasks() {
   if (state.queue.length === 0 && state.stats.tasksDone === 0) CONFIG.queue.startTasks.forEach((t) => spawnTask(t));
+  prefillForNextGoal();
   addSystem(tick);
 }
 on("agencyReset", () => { spawnTimer = 0; });
