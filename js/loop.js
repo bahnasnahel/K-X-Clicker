@@ -22,8 +22,10 @@ export function startLoop() {
     let dt = now - last;
     last = now;
     if (dt > CONFIG.loop.maxCatchUpMs) dt = step;   // onglet reste en arriere-plan
-    acc += dt;
-    while (acc >= step) { runSystems(step / 1000); acc -= step; }
+    acc += dt * (state.settings.speed || 1);        // vitesse du mode triche
+    let n = 0;
+    while (acc >= step && n++ < 400) { runSystems(step / 1000); acc -= step; }
+    if (n > 400) acc = 0;
     state.meta.lastActive = Date.now();
     for (const fn of frames) fn(now);
   }

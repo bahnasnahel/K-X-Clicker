@@ -234,3 +234,12 @@ h3.h{color:var(--or)}
 .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:auto}
 .opts .btn{margin:0;font:10px var(--px);min-height:56px}
 .autoline{margin:12px 0 0;font-size:12px;opacity:.75;line-height:1.5}
+
+/* ---- mode triche ---- */
+.cheatbadge{position:absolute;left:6px;top:6px;min-height:28px;padding:4px 8px;background:#ff5d7a;color:var(--n1);border:2px solid var(--n1);font:8px var(--px);z-index:2}
+.cheatbadge.hidden{display:none}
+.cheatrow{margin-bottom:6px}
+.seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.segbtn{min-height:44px;background:var(--n3);border:2px solid var(--n3);font:10px var(--px);color:var(--l);padding:0}
+.segbtn.on{background:var(--m);border-color:var(--l);color:var(--n1)}
+.modal{max-height:92dvh;overflow-y:auto}

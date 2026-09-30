@@ -21,7 +21,10 @@ Si tu ajoutes un fichier, ajoute-le aussi à la liste `FILES` de `sw.js`.
 Repères : seuil d'ouverture d'une agence dans `prestige.thresholds` (heures gagnées), cadence des clients dans `clients` et `sizes`,
 vitesse des workflows dans `workflow` et `blocks`, coûts de l'équipe dans `team`.
 
-## Mode test
+## Mode triche
+Réglages (engrenage) > « Mode triche (tests) » : vitesse du jeu x1 à x50, multiplicateur de gains x1 à x100, raccourcis (+1 000 EUR, +100 h, agence suivante prête, équipe recrutée, stress à zéro, attaque). Une pastille rouge « TRICHE » s'affiche en haut à gauche du bureau tant qu'un réglage est actif (tape-la pour rouvrir le panneau). Les réglages sont sauvegardés : remets x1 pour jouer normalement.
+
+## Mode test (console)
 Ajoute `?debug` à l'adresse : `window.kx` donne accès à `state`, `CONFIG` et `runSystems(dt)` dans la console
 (ex. `kx.state.money = 5000`, `kx.state.hoursRun = 200`, ou `for (let i=0;i<600;i++) kx.runSystems(0.1)` pour avancer de 60 s).
 

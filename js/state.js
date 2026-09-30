@@ -35,7 +35,7 @@ export function defaults() {
       attacksRepelled: 0, windowsOpened: 0, clientsSigned: 0, clientsSatisfied: 0,
       moneyEarned: 0,
     },
-    settings: { muted: false, tutorialDone: false },
+    settings: { muted: false, tutorialDone: false, speed: 1, gain: 1 },   // speed et gain : mode triche
     meta: { created: now, lastSave: now, lastActive: now },
   };
 }
@@ -86,11 +86,13 @@ export function save() {
 
 export function reset() {
   const muted = state.settings.muted;
+  const cheat = { speed: state.settings.speed, gain: state.settings.gain };
   try { localStorage.removeItem(CONFIG.save.key); } catch (e) {}
   const fresh = defaults();
   for (const k of Object.keys(state)) delete state[k];
   Object.assign(state, fresh);
   state.settings.muted = muted;
+  state.settings.speed = cheat.speed; state.settings.gain = cheat.gain;
   normalize();
   save();
 }
@@ -105,7 +107,7 @@ export function startAutosave() {
 
 // ---------- Gains ----------
 export function gainMult() {
-  return 1 + state.reputation * CONFIG.prestige.repBonus + state.bonusMult;
+  return (1 + state.reputation * CONFIG.prestige.repBonus + state.bonusMult) * (state.settings.gain || 1);
 }
 
 // Ajoute des gains (avec bonus de reputation et de succes). Retourne les gains reels.

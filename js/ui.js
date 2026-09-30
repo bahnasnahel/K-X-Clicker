@@ -7,6 +7,7 @@ import { setMuted } from "./audio.js";
 import { modal, confirmDialog } from "./modal.js";
 import { hitAttack } from "./crew.js";
 import { startTutorial } from "./tutorial.js";
+import { openCheat, cheatActive, cheatLabel } from "./cheat.js";
 import tasks from "./tabs/tasks.js";
 import workflows from "./tabs/workflows.js";
 import clients from "./tabs/clients.js";
@@ -48,6 +49,12 @@ export function initUI() {
   al.addEventListener("pointerdown", (e) => e.preventDefault());
   document.body.append(al);
   ui.alert = al;
+
+  // pastille visible quand le mode triche est actif (tape pour l'ouvrir)
+  const ch = el("button", "cheatbadge hidden");
+  ch.onclick = openCheat;
+  $(".deskwrap").append(ch);
+  ui.cheat = ch;
 }
 const ui = {};
 
@@ -84,6 +91,10 @@ export function updateUI() {
   if (t) t.update(state);
   for (const x of tabs) buttons[x.id].classList.toggle("badged", !!(x.badge && x.id !== current && x.badge()));
 
+  const on = cheatActive();
+  ui.cheat.classList.toggle("hidden", !on);
+  if (on) set("cheat", ui.cheat, cheatLabel());
+
   const a = state.attack;
   ui.alert.classList.toggle("hidden", !a);
   if (a) {
@@ -100,12 +111,14 @@ function openSettings() {
     snd.onclick = () => { setMuted(!state.settings.muted); snd.textContent = state.settings.muted ? "Son : coupé" : "Son : activé"; syncSound(); save(); sfx.tap(); };
     const tu = el("button", "btn ghost", "Revoir le tutoriel");
     tu.onclick = () => { close(); startTutorial(); };
+    const ct = el("button", "btn ghost", "Mode triche (tests)");
+    ct.onclick = () => { close(); openCheat(); };
     const rs = el("button", "btn danger", "Réinitialiser la partie");
     rs.onclick = async () => {
       const ok = await confirmDialog("Tout effacer ?", "Ta progression (argent, clients, workflows, agences) sera définitivement perdue.", "Effacer");
       if (ok) { reset(); location.reload(); }
     };
     const cl = el("button", "btn", "Fermer"); cl.onclick = () => close(true);
-    box.append(snd, tu, rs, cl, el("p", "muted small", "K'X Clicker V1 · " + CONFIG.slogan));
+    box.append(snd, tu, ct, rs, cl, el("p", "muted small", "K'X Clicker V1 · " + CONFIG.slogan));
   });
 }
