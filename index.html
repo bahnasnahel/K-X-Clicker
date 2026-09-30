@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#090615">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>K'X Clicker</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icons/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+<link rel="preload" href="assets/fonts/press-start-2p.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="deskwrap">
+      <canvas id="desk" aria-label="Bureau K'X"></canvas>
+      <div class="deskbtns">
+        <button id="btn-sound" class="iconbtn" aria-label="Couper le son"></button>
+        <button id="btn-gear" class="iconbtn" aria-label="Réglages"></button>
+      </div>
+      <div id="desk-label" class="desklabel"></div>
+    </div>
+    <div class="counters">
+      <div class="cnt gold"><span class="lb">Argent</span><span class="val" id="c-money">0</span><span class="unit">EUR</span></div>
+      <div class="cnt"><span class="lb">Heures gagnées</span><span class="val" id="c-hours">0</span><span class="unit">H</span></div>
+      <div class="cnt gauge" id="stress-cell"><span class="lb">Stress</span><span class="val" id="c-stress">0 %</span><i class="bar"><b id="bar-stress"></b></i></div>
+      <div class="cnt gauge" id="heat-cell"><span class="lb">Chaleur</span><span class="val" id="c-heat">0 %</span><i class="bar"><b id="bar-heat"></b></i></div>
+    </div>
+  </header>
+  <main id="main"></main>
+  <nav id="tabbar" role="tablist"></nav>
+</div>
+<noscript>K'X Clicker a besoin de JavaScript.</noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
