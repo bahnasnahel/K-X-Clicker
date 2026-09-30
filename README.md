@@ -22,6 +22,10 @@ Ouvre `data/employees.json`, copie une ligne et change l'`id` (unique), le `pren
 `minRunMoney` et `minCity` = quand il est proposé). L'identité des 4 directeurs est dans `data/directors.json`.
 Ajoute aussi le fichier à la liste `FILES` de `sw.js` si tu crées un nouveau fichier de données.
 
+## Ajouter des photos
+Dépose un `.webp` carré (256x256, recadré sur le visage) dans `assets/photos/people/`, ajoute son nom dans `data/photos.json` et dans `sw.js`.
+Les photos sont distribuées au hasard aux clients et aux employés, sans doublon. S'il n'y en a plus de libre, la personne n'a pas de photo.
+
 ## Équilibrage
 **Toutes** les valeurs (prix, gains, durées, seuils, textes des tâches, succès, tutoriel) sont dans `js/config.js`.
 Repères : seuil d'ouverture d'une agence dans `prestige.thresholds` (heures gagnées), cadence des clients dans `clients` et `sizes`,
@@ -39,8 +43,8 @@ Ajoute `?debug` à l'adresse : `window.kx` donne accès à `state`, `CONFIG` et 
 - `js/tasks.js` file de tâches, `js/taskdata.js` création des tâches (avec difficulté), `js/tabs/tasks.js` les 5 gestes
 - `js/workflows.js` automatisation par niveaux, bugs, `js/tabs/workflows.js` l'onglet Workflows
 - `js/clients.js` demandes, abonnements, service, crédibilité, `js/lawsuit.js` procès, `js/offline.js` gains hors ligne
-- `js/staff.js` employés, temps et compétence, affectation, salaires, `js/data.js` chargement de `data/`
-- `js/unlocks.js` progression : onglets et contenus qui apparaissent au fur et à mesure
-- `js/crew.js` directeurs, chaleur, fenêtres de Jadd, attaques, `js/prestige.js` agences, `js/achievements.js` succès
+- `js/staff.js` employés, bureau, temps et compétence, affectation, salaires, `js/ads.js` publicité (clients et recrutement), `js/avatar.js` photos sans doublon, `js/data.js` chargement de `data/`
+- `js/unlocks.js` progression : onglets et contenus qui apparaissent au fur et à mesure, avec explication (jeu en pause) ; `js/tutorial.js` les bulles d'explication
+- `js/crew.js` directeurs, Jadd (événements de la fenêtre), attaques, `js/prestige.js` agences, `js/achievements.js` succès
 - `js/render.js` bureau pixel (canvas), `js/ui.js` interface, `js/bubbles.js` + `js/tutorial.js` bulles avec photos, `js/audio.js` sons
 - `js/events.js` bus d'événements entre modules (ajouter une ville ou un événement ne demande pas de toucher aux autres)

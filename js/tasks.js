@@ -16,8 +16,8 @@ export function isUnlocked(type) {
 }
 export const availableTypes = () => Object.keys(CONFIG.tasks).filter(isUnlocked);
 
-// Gains du traitement manuel : ameliorations de Nahel.
-export const manualMult = () => 1 + state.team.nahel.lvl * CONFIG.team.nahel.manualBonus;
+// Les gains de Nahel (+10 % par niveau, gros boost tous les 5) sont appliques dans state.earn.
+export const manualMult = () => 1;
 
 // Duree du maintien d'un geste "hold", raccourcie par les ameliorations de Nahel.
 export function holdMs(type) {

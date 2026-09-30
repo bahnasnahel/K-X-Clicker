@@ -1,21 +1,29 @@
-import { el, fmt, fmt1, fmt2, liveView } from "../util.js";
+import { el, fmt, fmt2, liveView, setText } from "../util.js";
 import { CONFIG } from "../config.js";
-import { state } from "../state.js";
+import { state, office, nahelMult, yanisHoursMult } from "../state.js";
 import { sfx } from "../audio.js";
 import { confirmDialog } from "../modal.js";
 import { portrait, activePerson } from "../bubbles.js";
 import { avatar } from "../avatar.js";
-import { recruit, upgrade, upgradeCost, isVisible, jaddTap, jaddEvery, noahBlock } from "../crew.js";
-import { staffList, nahelStat, candidates, hire, fire, maxStaff, hiringLocked } from "../staff.js";
+import { recruit, upgrade, upgradeCost, isVisible, jaddTap, goodChance, noahBlock } from "../crew.js";
+import { staffList, nahelStat, candidates, hire, fire, maxStaff, officeMax, nextOffice, officeCost, upgradeOffice } from "../staff.js";
+import { recruitAdCost, canRecruitAd, launchRecruitAd, adRunning, adLeft, dismissCandidate, maxTier } from "../ads.js";
 
 const T = CONFIG.team;
+const pct = (v) => Math.round(v * 100);
 const effect = (id) => {
   const m = state.team[id];
-  if (id === "nahel") { const n = nahelStat(); return `Niveau ${m.lvl} · gains à la main +${Math.round(m.lvl * T.nahel.manualBonus * 100)} % · ${n.time} h de travail · compétence ${n.skill}`; }
+  if (id === "nahel") { const n = nahelStat(); return `Niveau ${m.lvl} · gains d'argent x${nahelMult().toFixed(2).replace(".", ",")} · ${n.time} h de travail · compétence ${n.skill}`; }
   if (!m.on) return "";
-  if (id === "yanis") return `Niveau ${m.lvl} · automatisations +${Math.round(m.lvl * T.yanis.speedBonus * 100)} % · niveaux 5 et plus débloqués`;
-  if (id === "jadd") return `Niveau ${m.lvl} · une fenêtre toutes les ${Math.round(jaddEvery())} s`;
-  if (id === "noah") return `Niveau ${m.lvl} · blocage automatique ${Math.round(noahBlock() * 100)} %`;
+  if (id === "yanis") return `Niveau ${m.lvl} · automatisation +${pct(m.lvl * T.yanis.speedBonus)} % · heures x${yanisHoursMult().toString().replace(".", ",")}`;
+  if (id === "jadd") return `Niveau ${m.lvl} · ${pct(goodChance())} % d'événements positifs`;
+  if (id === "noah") return `Niveau ${m.lvl} · blocage automatique ${pct(noahBlock())} %`;
+};
+const nextBonus = (id) => {           // prochain gros palier
+  const every = id === "nahel" ? T.nahel.bigBoostEvery : id === "yanis" ? T.yanis.hoursEvery : 0;
+  if (!every) return "";
+  const l = state.team[id].lvl, nxt = (Math.floor(l / every) + 1) * every;
+  return nxt <= T[id].maxLevel ? `Gros boost au niveau ${nxt}.` : "";
 };
 
 export default {
@@ -24,19 +32,29 @@ export default {
   mount(root) {
     const sig = () => JSON.stringify([
       Object.keys(T).map((id) => [state.team[id].on, state.team[id].lvl, isVisible(id), state.money >= (state.team[id].on ? upgradeCost(id) : T[id].recruit)]),
-      state.staff, state.assign, state.clients.map((c) => c.id), candidates().map((e) => [e.id, state.money >= e.hire]), state.city,
+      state.staff, state.assign, state.clients.map((c) => c.id), state.candidates, candidates().map((e) => state.money >= e.hire),
+      state.city, state.office, state.money >= officeCost(), adRunning("recruit"), canRecruitAd(), recruitAdCost(),
     ]);
     this.cards = {};
-    this.view = liveView(root, sig, (r) => {
+    this.view = liveView(root, sig, (r, live) => {
       this.cards = {};
+
+      // bureau
+      r.append(el("h2", "h", "Bureau"));
+      const off = el("div", "card officecard");
+      const nx = nextOffice();
+      off.innerHTML = `<div class="cinfo"><b>${office().name}</b><span class="sdesc">${state.staff.length} / ${maxStaff()} places occupées.${nx ? ` Prochain : ${nx.name} (${nx.staff} places).` : " Niveau maximum."}</span></div>`;
+      if (nx) { const b = el("button", "btn small-btn", `Améliorer<br><small>${fmt(officeCost())} EUR</small>`); b.disabled = state.money < officeCost(); b.onclick = () => upgradeOffice(); off.append(b); }
+      r.append(off);
+
       r.append(el("h2", "h", "Direction"));
       for (const id of Object.keys(T)) {
         if (!isVisible(id)) continue;
         const cfg = T[id], m = state.team[id];
         const c = el("div", "card person");
-        const fx = effect(id);
+        const fx = effect(id), nb = m.on || id === "nahel" ? nextBonus(id) : "";
         c.innerHTML = `${portrait(id)}<span class="pt"><span class="nm">${cfg.name}</span><span class="rl">${cfg.role}</span>
-          <span class="ds">${cfg.desc}</span>${fx ? `<span class="fx">${fx}</span>` : ""}<span class="acts"></span></span>`;
+          <span class="ds">${cfg.desc}</span>${fx ? `<span class="fx">${fx}</span>` : ""}${nb ? `<span class="fx boost">${nb}</span>` : ""}<span class="acts"></span></span>`;
         const acts = c.querySelector(".acts");
         let b = null;
         if (!m.on) { b = el("button", "btn small-btn wide", `Recruter · ${fmt(cfg.recruit)} EUR`); b.disabled = state.money < cfg.recruit; b.onclick = (e) => { e.stopPropagation(); recruit(id); }; }
@@ -49,15 +67,14 @@ export default {
       }
 
       // employes
-      const head = el("div", "qhead", `<h2 class="h">Employés</h2><span class="qcount">${state.staff.length} / ${maxStaff()}</span>`);
-      r.append(head);
+      r.append(el("div", "qhead", `<h2 class="h">Employés</h2><span class="qcount">${state.staff.length} / ${maxStaff()}</span>`));
       r.append(el("p", "muted small", "Chaque employé apporte du temps et un niveau de compétence pour servir tes clients. Il coûte un salaire en continu."));
       const hired = staffList().filter((p) => !p.isNahel);
       if (!hired.length) r.append(el("p", "muted", "Personne pour l'instant : tu travailles seul."));
       for (const p of hired) {
         const cl = state.clients.find((c) => c.id === state.assign[p.id]);
         const c = el("div", "card emp");
-        c.innerHTML = `${avatar(p)}<span class="pt"><span class="nm">${p.name}</span><span class="rl">${p.title}</span>
+        c.innerHTML = `${avatar(p, "", "e:" + p.id)}<span class="pt"><span class="nm">${p.name}</span><span class="rl">${p.title}</span>
           <span class="fx">${p.time} h · niveau ${p.skill} · salaire ${fmt2(p.salary)} EUR/s</span><span class="ds">${cl ? "Travaille pour " + cl.name : "Sans affectation"}</span></span>`;
         const f = el("button", "btn small-btn ghost", "Licencier");
         f.onclick = async () => { if (await confirmDialog("Licencier ?", `${p.name} quittera K'X. Son embauche ne sera pas remboursée.`, "Licencier")) fire(p.id); };
@@ -65,22 +82,36 @@ export default {
         r.append(c);
       }
 
-      // recrutement
-      r.append(el("p", "qlabel", "À embaucher"));
-      const cands = candidates().slice(0, 3);
-      if (state.staff.length >= maxStaff()) r.append(el("p", "muted", "Équipe complète. Ouvre une agence plus grande pour embaucher davantage."));
-      else if (!cands.length) r.append(el("p", "muted", "Aucun profil disponible pour le moment."));
-      else for (const e of cands) {
+      // recrutement par campagne
+      r.append(el("p", "qlabel", "Recrutement"));
+      const ad = el("div", "card adcard");
+      ad.innerHTML = `<div class="cinfo"><b>Campagne de recrutement</b><span class="sdesc">Des profils se présentent. Avec ta crédibilité actuelle, tu peux attirer jusqu'au niveau ${maxTier()} sur 5.</span><i class="bar adbar"><b></b></i><span class="satline adline"></span></div>`;
+      const ab = el("button", "btn small-btn", `Campagne<br><small>${fmt(recruitAdCost())} EUR</small>`);
+      ab.disabled = !canRecruitAd();
+      ab.onclick = () => launchRecruitAd();
+      ad.append(ab);
+      const abar = ad.querySelector(".adbar b"), aline = ad.querySelector(".adline");
+      live(() => {
+        if (adRunning("recruit")) { const left = adLeft("recruit"); abar.style.width = (100 - (left / CONFIG.ads.recruit.durationSec) * 100) + "%"; setText(aline, `Campagne en cours : ${Math.ceil(left)} s`); }
+        else { abar.style.width = "0"; setText(aline, state.staff.length >= maxStaff() ? "Bureau plein : améliore-le pour embaucher." : state.candidates.length >= CONFIG.ads.recruit.maxPending ? "Liste pleine : embauche ou refuse un profil." : ""); }
+      });
+      r.append(ad);
+
+      const cands = candidates();
+      if (cands.length) r.append(el("p", "qlabel", "Profils à étudier"));
+      for (const e of cands) {
         const c = el("div", "card emp cand");
-        c.innerHTML = `${avatar(e)}<span class="pt"><span class="nm">${e.name}</span><span class="rl">${e.titre}</span>
+        c.innerHTML = `${avatar(e, "", "e:" + e.id)}<span class="pt"><span class="nm">${e.name}</span><span class="rl">${e.titre}</span>
           <span class="fx">${e.time} h · niveau ${e.skill} · salaire ${fmt2(e.salary)} EUR/s</span></span>`;
+        const col = el("span", "btncol");
         const b = el("button", "btn small-btn", `Embaucher<br><small>${fmt(e.hire)} EUR</small>`);
-        b.disabled = state.money < e.hire;
+        b.disabled = state.money < e.hire || state.staff.length >= maxStaff();
         b.onclick = () => hire(e.id);
-        c.append(b);
+        const no = el("button", "btn small-btn ghost", "Refuser");
+        no.onclick = () => { dismissCandidate(e.id); sfx.tap(); };
+        col.append(b, no); c.append(col);
         r.append(c);
       }
-      if (hiringLocked() > 0 && state.staff.length < maxStaff()) r.append(el("p", "muted small", "De meilleurs profils se présenteront quand tu auras gagné plus d'argent."));
     });
   },
   update() {

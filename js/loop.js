@@ -13,6 +13,9 @@ export function runSystems(dt) {
   for (const fn of systems) fn(dt);
 }
 
+// Le jeu est en pause tant qu'une explication ou une fenetre est ouverte.
+export const isPaused = () => !!document.querySelector(".overlay, .tuto");
+
 export function startLoop() {
   const step = CONFIG.loop.stepMs;
   let last = performance.now();
@@ -22,6 +25,7 @@ export function startLoop() {
     let dt = now - last;
     last = now;
     if (dt > CONFIG.loop.maxCatchUpMs) dt = step;   // onglet reste en arriere-plan
+    if (isPaused()) { acc = 0; state.meta.lastActive = Date.now(); for (const fn of frames) fn(now); return; }
     acc += dt * (state.settings.speed || 1);        // vitesse du mode triche
     let n = 0;
     while (acc >= step && n++ < 400) { runSystems(step / 1000); acc -= step; }

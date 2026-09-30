@@ -1,0 +1,4 @@
+{
+  "_aide": "Photos (256x256, recadrées sur le visage) distribuées au hasard aux clients et aux employés, sans doublon. S'il n'y en a plus de libre, la personne n'a pas de photo. Pour en ajouter : dépose un .webp dans assets/photos/people/ et ajoute son nom ici (et dans sw.js).",
+  "photos": ["p1", "p2", "p3", "p4"]
+}

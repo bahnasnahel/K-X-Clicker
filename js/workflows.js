@@ -1,7 +1,7 @@
 // Automatisation : un niveau par type de tache. Plus le niveau est haut, plus c'est rapide
 // et plus de taches difficiles sont gerees. Verification = plus sur mais plus lent.
 import { CONFIG } from "./config.js";
-import { state, earn } from "./state.js";
+import { state, earn, yanisHoursMult } from "./state.js";
 import { addSystem } from "./loop.js";
 import { emit } from "./events.js";
 import { sfx } from "./audio.js";
@@ -12,7 +12,7 @@ import { makeTask, enqueue } from "./taskdata.js";
 const A = CONFIG.auto;
 
 export function auto(type) {
-  return (state.auto[type] ||= { level: 0, verify: true, backlog: [], progress: 0, pausedUntil: 0, crashedUntil: 0 });
+  return (state.auto[type] ||= { level: 0, verify: true, backlog: [], progress: 0, pausedUntil: 0, crashedUntil: 0, upgrading: null });
 }
 export const level = (type) => (state.auto[type] ? state.auto[type].level : 0);
 export const isActive = (type) => level(type) > 0;
@@ -21,19 +21,13 @@ export const activeTypes = () => Object.keys(state.auto).filter(isActive);
 export const activeCount = () => activeTypes().length;
 export const diffMult = (d) => 1 + CONFIG.difficultyBonus * (Math.max(1, d || 1) - 1);
 
-export function heatFactor() {
-  const H = CONFIG.heat;
-  return 1 - H.slowMax * clamp((state.heat - H.slowStart) / (H.max - H.slowStart), 0, 1);
-}
-
 // taches traitees par seconde
 export function rate(type) {
   const L = level(type);
   if (L <= 0) return 0;
   const y = state.team.yanis;
   const team = y.on ? 1 + y.lvl * CONFIG.team.yanis.speedBonus : 1;
-  const srv = 1 + state.servers * CONFIG.servers.speedBonus;
-  return A.baseRate * Math.pow(A.rateGrowth, L - 1) * (verifyOn(type) ? A.verifySpeed : A.noVerifyBonus) * team * srv * heatFactor();
+  return A.baseRate * Math.pow(A.rateGrowth, L - 1) * (verifyOn(type) ? A.verifySpeed : A.noVerifyBonus) * team;
 }
 
 export function status(type) {
@@ -45,13 +39,17 @@ export function status(type) {
 }
 
 // ---- achats ----
+// duree d'installation du niveau suivant (pendant ce temps, l'ancien niveau continue de tourner)
+export const installTime = (type) => Math.round(A.installSec * Math.pow(A.installGrowth, level(type)));
+export const upgrading = (type) => !!(state.auto[type] && state.auto[type].upgrading);
+export const upgradeLeft = (type) => (upgrading(type) ? Math.max(0, state.auto[type].upgrading.end - state.stats.playSeconds) : 0);
 export const installCost = (type) => A.installCost[type];                                   // EUR, niveau 1
 export const upgradeCost = (type) => Math.round(A.hoursBase * Math.pow(A.hoursGrowth, level(type) - 1) * A.hoursMult[type]);   // heures
 export const needsYanis = (type) => level(type) + 1 >= A.needsYanisFrom && !state.team.yanis.on;
 export const atMax = (type) => level(type) >= A.maxLevel;
 
 export function canUpgrade(type) {
-  if (atMax(type) || needsYanis(type)) return false;
+  if (atMax(type) || needsYanis(type) || upgrading(type)) return false;
   return level(type) === 0 ? state.money >= installCost(type) : state.hoursSaved >= upgradeCost(type);
 }
 
@@ -59,8 +57,9 @@ export function upgrade(type) {
   if (!canUpgrade(type)) return false;
   if (level(type) === 0) state.money -= installCost(type);
   else state.hoursSaved -= upgradeCost(type);
-  auto(type).level++;
-  sfx.unlock();
+  const tot = installTime(type);
+  auto(type).upgrading = { to: level(type) + 1, end: state.stats.playSeconds + tot, total: tot };   // delai d'installation
+  sfx.ok();
   return true;
 }
 
@@ -91,7 +90,7 @@ function processOne(type, w, item) {
     return;
   }
   const c = CONFIG.tasks[type], m = diffMult(item.d);
-  earn(c.euro * A.euroYield * m, c.hours * m);
+  earn(c.euro * A.euroYield * m, c.hours * m, 1, yanisHoursMult());
   state.stats.autoDone++;
   emit("task", { task: item, auto: true });
 }
@@ -100,6 +99,10 @@ function tick(dt) {
   const now = state.stats.playSeconds;
   for (const type of Object.keys(state.auto)) {
     const w = state.auto[type];
+    if (w.upgrading && now >= w.upgrading.end) {          // installation terminee
+      w.level = w.upgrading.to; w.upgrading = null;
+      sfx.unlock(); toast(`${CONFIG.tasks[type].label} : automatisation niveau ${w.level} en marche.`);
+    }
     if (w.level <= 0) continue;
     // retire de la file manuelle les taches que l'automatisation sait traiter
     for (let i = state.queue.length - 1; i >= 0 && w.backlog.length < A.backlogCap; i--) {

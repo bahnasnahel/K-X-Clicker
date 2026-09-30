@@ -291,3 +291,23 @@ body.notabs #bubbles,body.notabs .alert{bottom:calc(14px + env(safe-area-inset-b
 .emp .fx{font-size:12px;color:var(--l)}
 .emp .ds{font-size:12px;opacity:.8}
 .emp .small-btn{min-width:84px}
+
+/* ---- publicite, bureau, capacite, evenements ---- */
+.adcard{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.adbar{height:8px!important}
+.adline{min-height:16px}
+.capcard{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.capval{font:9px var(--px);margin-left:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip2{font-size:11px;font-weight:700;padding:5px 8px;border:2px solid var(--v);white-space:nowrap}
+.chip2.busy{background:var(--v);color:var(--n1)} .chip2.free{background:none;color:var(--l)}
+.officecard{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.officecard b{font:10px var(--px)}
+.btncol{display:flex;flex-direction:column;gap:6px;flex:none}
+.fx.boost{color:var(--m);font-weight:700}
+.bubble i.good{font-style:normal;font-weight:700;color:var(--l);margin-right:4px}
+.bubble i.bad{font-style:normal;font-weight:700;color:#ff9db0;margin-right:4px}
+.instbar{margin-top:8px}
+.tuto strong{display:block;font-size:15px;margin-bottom:4px}
+.client>.frame,.offer>.frame{width:52px;height:52px}
+.tuto{max-height:70dvh;overflow-y:auto}

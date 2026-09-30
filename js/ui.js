@@ -1,6 +1,6 @@
 import { el, fmt, fmtHours, setText } from "./util.js";
 import { CONFIG } from "./config.js";
-import { state, save, reset, deskLevel } from "./state.js";
+import { state, save, reset, office } from "./state.js";
 import { icon } from "./icons.js";
 import { sfx } from "./audio.js";
 import { setMuted } from "./audio.js";
@@ -8,6 +8,7 @@ import { modal, confirmDialog, infoDialog } from "./modal.js";
 import { hitAttack } from "./crew.js";
 import { startTutorial } from "./tutorial.js";
 import { openCheat, cheatActive, cheatLabel } from "./cheat.js";
+import { stressMult } from "./state.js";
 import tasks from "./tabs/tasks.js";
 import workflows from "./tabs/workflows.js";
 import clients from "./tabs/clients.js";
@@ -87,15 +88,13 @@ export function updateUI() {
   set("money", $("#c-money"), fmt(state.money));
   set("hours", $("#c-hours"), fmtHours(state.hoursSaved));
   set("stress", $("#c-stress"), Math.round(state.stress) + " %");
-  set("heat", $("#c-heat"), Math.round(state.heat) + " %");
   $("#cell-hours").hidden = !state.flags.hours;
   $("#stress-cell").hidden = !state.flags.stress;
-  $("#heat-cell").hidden = !state.flags.heat;
   $("#bar-stress").style.width = state.stress + "%";
-  $("#bar-heat").style.width = state.heat + "%";
   $("#stress-cell").classList.toggle("hot", state.stress >= 100);
-  $("#heat-cell").classList.toggle("hot", state.heat >= 80);
-  set("deskLabel", $("#desk-label"), CONFIG.prestige.cities[state.city]);
+  set("deskLabel", $("#desk-label"), `${CONFIG.prestige.cities[state.city]} · ${office().name}`);
+  const pen = Math.round((1 - stressMult()) * 100);
+  set("stresslb", $("#stress-cell .lb"), pen > 0 ? `Stress -${pen} %` : "Stress");
 
   // les onglets apparaissent au fur et a mesure ; la barre n'existe qu'a partir de deux onglets
   let visible = 0;

@@ -1,6 +1,6 @@
 // Personnel : Nahel + employes (data/employees.json). Temps, competence, affectation aux clients, salaires.
 import { CONFIG } from "./config.js";
-import { state } from "./state.js";
+import { state, staffCap, office } from "./state.js";
 import { addSystem } from "./loop.js";
 import { on } from "./events.js";
 import { sfx } from "./audio.js";
@@ -8,6 +8,7 @@ import { toast } from "./toast.js";
 import { DATA } from "./data.js";
 
 const S = CONFIG.staff;
+const O = CONFIG.office;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 // Nahel travaille aussi : ses ameliorations lui donnent du temps et de la competence.
@@ -23,7 +24,7 @@ export function staffList() {
 }
 export const findStaff = (id) => staffList().find((p) => p.id === id);
 export const payroll = () => state.staff.reduce((s, id) => s + (DATA.byId[id] ? DATA.byId[id].salary : 0), 0);
-export const maxStaff = () => S.maxStaff[Math.min(state.city, S.maxStaff.length - 1)];
+export const maxStaff = () => staffCap();
 
 // ---- service rendu a un client ----
 export const assignedTo = (clientId) => staffList().filter((p) => state.assign[p.id] === clientId);
@@ -70,18 +71,16 @@ export function autoAssign() {
 }
 export const refreshAssign = () => { if (state.autoAssign) autoAssign(); };
 
-// ---- embauche ----
+// ---- embauche : les profils viennent des campagnes de recrutement ----
 export const isHired = (id) => state.staff.includes(id);
-export function candidates() {
-  return DATA.employees.filter((e) => !isHired(e.id) && e.minCity <= state.city && state.runMoney >= e.minRunMoney).sort((a, b) => a.hire - b.hire);
-}
-export const hiringLocked = () => DATA.employees.filter((e) => !isHired(e.id) && !(e.minCity <= state.city && state.runMoney >= e.minRunMoney)).length;
+export const candidates = () => state.candidates.map((id) => DATA.byId[id]).filter(Boolean);
 
 export function hire(id) {
   const e = DATA.byId[id];
-  if (!e || isHired(id) || state.money < e.hire || state.staff.length >= maxStaff()) return false;
+  if (!e || isHired(id) || !state.candidates.includes(id) || state.money < e.hire || state.staff.length >= maxStaff()) return false;
   state.money -= e.hire;
   state.staff.push(id);
+  state.candidates = state.candidates.filter((x) => x !== id);
   refreshAssign();
   sfx.unlock();
   toast(`${e.name} rejoint K'X : ${e.titre}.`);
@@ -93,6 +92,19 @@ export function fire(id) {
   delete state.assign[id];
   refreshAssign();
   sfx.tap();
+}
+
+// ---- bureau : plus de places, et le dessin change ----
+export const officeMax = () => state.office >= O.levels.length - 1;
+export const nextOffice = () => (officeMax() ? null : O.levels[state.office + 1]);
+export const officeCost = () => (officeMax() ? 0 : Math.round(O.levels[state.office + 1].cost * (1 + O.cityCostBonus * state.city)));
+export function upgradeOffice() {
+  if (officeMax() || state.money < officeCost()) return false;
+  state.money -= officeCost();
+  state.office++;
+  sfx.unlock();
+  toast(`Nouveau bureau : ${office().name}. ${office().staff} places.`);
+  return true;
 }
 
 // ---- salaires (en continu) ----

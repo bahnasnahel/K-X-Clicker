@@ -10,7 +10,7 @@ export const CONFIG = {
   slogan: "Reprenez le temps que vos processus vous prennent.",
 
   // --- Sauvegarde ---
-  save: { key: "kx-clicker-save", version: 3, intervalMs: 10000 },
+  save: { key: "kx-clicker-save", version: 4, intervalMs: 10000 },
 
   // --- Boucle ---
   loop: { stepMs: 100, maxCatchUpMs: 1000 },
@@ -22,13 +22,17 @@ export const CONFIG = {
     minAwaySeconds: 60,   // en dessous, pas d'ecran recap
   },
 
-  // --- Bureau pixel : evolue avec le nombre d'employes ---
-  desk: [
-    { minStaff: 0, label: "Un PC pour commencer" },
-    { minStaff: 2, label: "Deux écrans" },
-    { minStaff: 5, label: "Trois écrans" },
-    { minStaff: 9, label: "Le bureau tourne à plein régime" },
-  ],
+  // --- Bureau : niveaux, nombre d'employes maximum, cout (EUR). Le bureau change aussi dans l'image du haut. ---
+  office: {
+    levels: [
+      { name: "Petit bureau",   staff: 2,  cost: 0 },
+      { name: "Bureau partagé", staff: 4,  cost: 200 },
+      { name: "Open space",     staff: 7,  cost: 800 },
+      { name: "Plateau complet", staff: 10, cost: 2500 },
+      { name: "Siège de K'X",   staff: 14, cost: 8000 },
+    ],
+    cityCostBonus: 0.6,         // +60 % de cout par ville
+  },
 
   // --- Stress ---
   stress: {
@@ -37,17 +41,8 @@ export const CONFIG = {
     overflowPerSec: 2,     // par tache au-dela de la capacite
     mistake: 4,            // erreur de geste (mauvais dossier, mauvaise case)
     highThreshold: 70,     // au-dessus : les clients s'agacent un peu
-  },
-
-  // --- Chaleur du bureau ---
-  heat: {
-    max: 100,
-    perWorkflow: 5,        // chaleur cible par type de tache automatise
-    perServer: 10,         // chaleur cible par serveur
-    jaddPassivePerLevel: 4,// baisse de la cible par niveau de Jadd
-    approachPerSec: 0.08,  // vitesse a laquelle la chaleur rejoint sa cible
-    slowStart: 40,         // au-dela, les automatisations ralentissent
-    slowMax: 0.5,          // ralentissement maximal a 100 % de chaleur
+    gainPenaltyStart: 30,  // a partir de ce stress, les gains baissent...
+    gainPenaltyMax: 0.5,   // ...jusqu'a -50 % a 100 % de stress
   },
 
   // --- Types de taches ---
@@ -69,7 +64,7 @@ export const CONFIG = {
   queue: {
     capacity: 8,           // au-dela, le stress monte
     hardCapMult: 2,        // la file n'accepte plus de tache a capacity x 2
-    baseSpawnEverySec: 6,  // taches "maison" (sans client), delai moyen
+    baseSpawnEverySec: 8,  // taches "maison" (sans client), delai moyen
     startTasks: ["relance", "relance"],
     overdueSec: 45,        // une tache de client en attente depuis plus longtemps le mecontente
   },
@@ -103,8 +98,28 @@ export const CONFIG = {
 
   // --- Personnel ---
   staff: {
-    maxStaff: [5, 9, 14],       // employes maximum par ville (hors directeurs)
     nahel: { baseTime: 8, timePerLevel: 1, skillEvery: 3 },   // Nahel travaille aussi : temps et competence
+  },
+
+  // --- Publicite : pour trouver des clients et des employes ---
+  ads: {
+    client: {
+      cost: 35, perClient: 0.2, cityBonus: 0.6,   // cout = cost x (1 + 0,2 x clients) x (1 + 0,6 x ville)
+      durationSec: 14,
+      offers: [1, 2],           // demandes obtenues (+1 si credibilite >= 60)
+      bonusCred: 60,
+      maxPending: 4,            // demandes en attente maximum
+      firstFree: true,          // la toute premiere campagne est offerte
+    },
+    recruit: {
+      cost: 90, cityBonus: 0.6,
+      durationSec: 20,
+      candidates: [2, 3],       // profils proposes (+1 si credibilite >= 60)
+      bonusCred: 60,
+      maxPending: 4,
+      // credibilite minimale pour voir des profils de niveau 1, 2, 3, 4, 5
+      tierCred: [0, 20, 40, 60, 80],
+    },
   },
 
   // --- Automatisation (un niveau par type de tache) ---
@@ -119,6 +134,8 @@ export const CONFIG = {
     hoursBase: 5,               // cout en heures du niveau 2
     hoursGrowth: 2.2,           // x par niveau
     hoursMult: { relance: 0.8, facture: 1, excel: 1.4, rapport: 2, devis: 3, contrat: 4 },
+    installSec: 6,              // duree d'installation du niveau 1 (pendant ce temps : rien ne change)
+    installGrowth: 1.6,         // x par niveau
     needsYanisFrom: 5,          // niveaux 5 et + : Yanis doit etre recrute
     verifySpeed: 0.7,           // avec verification : plus lent, pas de bug
     noVerifyBonus: 1.35,        // sans verification : plus rapide, risque de bug
@@ -171,7 +188,7 @@ export const CONFIG = {
 
   // --- Credibilite et proces ---
   credibility: {
-    start: 60,
+    start: 35,
     serviceLow: 0.7,            // service moyen sous ce seuil : la credibilite baisse
     serviceHigh: 0.9,           // au-dessus : elle remonte
     lowPerSec: -0.5,            // x (seuil - service), par seconde
@@ -199,27 +216,46 @@ export const CONFIG = {
   // recruit : cout en EUR ; upgrade : cout du niveau n = base x growth^n
   team: {
     nahel: { name: "Nahel", role: "Fondateur, sur le terrain",
-      desc: "C'est toi. Chaque niveau : +15 % de gains à la main, gestes plus rapides, et un peu plus de temps et de compétence pour servir les clients.",
+      desc: "C'est toi. Chaque niveau : +10 % de gains d'argent. Tous les 5 niveaux : un gros boost x1,5. Tu apportes aussi du temps et de la compétence pour servir les clients.",
       recruit: 0, upgrade: { base: 25, growth: 1.7 }, maxLevel: 10,
-      manualBonus: 0.15, holdFaster: 0.07, holdMin: 0.5 },
+      moneyPerLevel: 0.10, bigBoostEvery: 5, bigBoost: 1.5, holdFaster: 0.05, holdMin: 0.5 },
     yanis: { name: "Yanis", role: "Fondateur tech",
-      desc: "Nécessaire pour les automatisations de niveau 5 et plus. Chaque niveau : +20 % de vitesse d'automatisation.",
-      recruit: 120, upgrade: { base: 150, growth: 1.8 }, maxLevel: 8, speedBonus: 0.2 },
+      desc: "Chaque niveau : +20 % de vitesse d'automatisation. Tous les 5 niveaux : x1,5 sur les heures gagnées par l'automatisation. Nécessaire pour les automatisations de niveau 5 et plus.",
+      recruit: 120, upgrade: { base: 150, growth: 1.8 }, maxLevel: 10,
+      speedBonus: 0.2, hoursEvery: 5, hoursBoost: 1.5 },
     jadd: { name: "Jadd Barnas", role: "Ingénieur ouvreur de fenêtres",
-      desc: "Ouvre régulièrement les fenêtres : la chaleur et le stress baissent. Chaque niveau : fenêtres plus fréquentes.",
-      recruit: 250, upgrade: { base: 200, growth: 1.8 }, maxLevel: 8,
-      everySec: 40, everyFactor: 0.9, heatDrop: 18, stressDrop: 10 },
+      desc: "Il guette la fenêtre et l'ouvre dès que quelque chose passe. À chaque ouverture, un événement arrive. Plus il monte de niveau, plus il ouvre au bon moment (événements positifs).",
+      recruit: 250, upgrade: { base: 200, growth: 1.8 }, maxLevel: 10,
+      eventEverySec: [35, 70], goodBase: 0.3, goodPerLevel: 0.065, goodMax: 0.95 },
     noah: { name: "Noah", role: "Cybersécurité",
       desc: "Bloque automatiquement une partie des attaques. Chaque niveau : +10 % de blocage.",
-      recruit: 400, upgrade: { base: 350, growth: 1.8 }, maxLevel: 8,
+      recruit: 400, upgrade: { base: 350, growth: 1.8 }, maxLevel: 10,
       blockBase: 0.3, blockPerLevel: 0.1, blockMax: 0.9 },
   },
 
-  servers: { max: 3, cost: 180, growth: 2.2, speedBonus: 0.18 },
+  // --- Evenements de la fenetre de Jadd ---
+  // effets : money (EUR fixes + part du revenu/s), stress, cred, tasks (taches en plus), pause (s, automatisation), offer (un client se presente), hours
+  jaddEvents: {
+    good: [
+      { text: "Un pigeon voyageur apporte une demande : un client se présente.", effect: { offer: 1 } },
+      { text: "Une brise fraîche traverse le bureau : le stress retombe.",     effect: { stress: -40 } },
+      { text: "Un billet s'envoie par la fenêtre : de l'argent en plus.",       effect: { money: 40, moneyPerIncome: 30 } },
+      { text: "Un passant reconnaît le logo K'X : ta crédibilité monte.",       effect: { cred: 8 } },
+      { text: "Un cycliste glisse une astuce d'automatisation : des heures gagnées.", effect: { hours: 3 } },
+    ],
+    bad: [
+      { text: "Une rafale emporte des dossiers : des tâches en plus dans la file.", effect: { tasks: 3 } },
+      { text: "Un pigeon se pose sur le serveur : une automatisation en pause.",    effect: { pause: 12 } },
+      { text: "Un chantier voisin fait un bruit d'enfer : le stress monte.",        effect: { stress: 25 } },
+      { text: "Un courant d'air emporte des billets : de l'argent en moins.",       effect: { money: -25, moneyPerIncome: -20 } },
+      { text: "Un passant filme ton bureau en désordre : ta crédibilité baisse.",   effect: { cred: -6 } },
+    ],
+    passers: ["oiseau", "avion", "nuage", "ballon"],
+  },
 
   // --- Attaques (visent un type de tache automatise) ---
   attacks: {
-    startAutoDone: 30,      // taches automatisees avant la premiere attaque
+    startAutoDone: 30,      // taches automatisees avant la premiere attaque (et Noah recrutable)
     everySec: 110,
     tapsToRepel: 4,
     windowSec: 9,           // temps pour repousser
@@ -229,7 +265,7 @@ export const CONFIG = {
   // --- Prestige : ouvrir une nouvelle agence ---
   prestige: {
     cities: ["Angoulême", "Le Mans", "Paris"],
-    thresholds: [400, 850, 1600],  // heures gagnees (automatisation) pour ouvrir l'agence suivante
+    thresholds: [360, 500, 750],  // heures gagnees (automatisation) pour ouvrir l'agence suivante
     repPerHours: 150,             // reputation gagnee = heures / ce nombre
     repBonus: 0.08,               // +10 % de gains par point de reputation
     repLargeBoost: 0.15,          // poids des gros clients +15 % par point
@@ -257,7 +293,7 @@ export const CONFIG = {
     { id: "full_team",    label: "Toute la direction",    desc: "Recruter Yanis, Jadd et Noah.",                reward: { mult: 0.04 } },
     { id: "firewall",     label: "Pare-feu",              desc: "Repousser 10 attaques.",                       reward: { mult: 0.03 } },
     { id: "fresh_air",    label: "Air frais",             desc: "Jadd ouvre la fenêtre 10 fois.",               reward: { mult: 0.02 } },
-    { id: "servers_3",    label: "Salle des serveurs",    desc: "Posséder 3 serveurs.",                         reward: { mult: 0.03 } },
+    { id: "office_3",     label: "Plateau complet",       desc: "Améliorer le bureau jusqu'au plateau complet.", reward: { mult: 0.03 } },
     { id: "hours_100",    label: "100 heures gagnées",    desc: "Gagner 100 heures au total.",                  reward: { mult: 0.02 } },
     { id: "rich",         label: "Petite fortune",        desc: "Gagner 10 000 EUR au total.",                  reward: { mult: 0.03 } },
     { id: "agency_2",     label: "Nouvelle agence",       desc: "Ouvrir l'agence du Mans.",                     reward: { mult: 0.05 } },
@@ -277,38 +313,40 @@ export const CONFIG = {
   ],
 
   // --- Progression : le contenu apparait au fur et a mesure ---
-  // when : condition (recoit l'etat du jeu) ; who/text : bulle avec photo ; tab : onglet qui apparait
+  // Chaque deblocage met le jeu en PAUSE avec une explication (bulle avec photo), puis le jeu reprend.
+  // On laisse jouer au moins unlockGapSec secondes entre deux explications.
+  // when : condition (recoit l'etat du jeu) ; who/title/text : explication ; tab : onglet qui apparait
+  unlockGapSec: 40,
   unlocks: [
-    { id: "facture",  when: (s) => s.stats.tasksDone >= 3,  who: "nahel", msg: "Nouveau type de tâche : facture", text: "Des factures arrivent. Glisse chacune dans le bon dossier : Clients, Fournisseurs ou Banque." },
-    { id: "clients",  when: (s) => s.stats.tasksDone >= 6,  who: "nahel", tab: "clients", msg: "Nouvel onglet : Clients", text: "Des entreprises veulent travailler avec nous. Signe un client : il paie un abonnement, mais il faut le servir." },
-    { id: "team",     when: (s) => s.stats.clientsSigned >= 1, who: "nahel", tab: "team", msg: "Nouvel onglet : Équipe", text: "Chaque client demande du temps et de la compétence. Embauche du monde pour les servir, ou occupe-toi d'eux toi-même." },
-    { id: "stress",   when: (s) => s.stats.tasksDone >= 12, who: "nahel", msg: "Nouveau : le stress", text: "Si trop de tâches s'accumulent, le stress monte. Touche le « ? » pour comprendre." },
-    { id: "excel",    when: (s) => s.stats.tasksDone >= 22, who: "nahel", msg: "Nouveau type de tâche : tableau Excel", text: "Des tableaux à remplir. Tape les 3 cases qui brillent." },
-    { id: "workflows", when: (s) => s.stats.moneyEarned >= 120 && s.stats.clientsSigned >= 1, who: "yanis", tab: "workflows", msg: "Nouvel onglet : Workflows", text: "On peut automatiser les tâches répétitives. Installe une première automatisation : elle te fera gagner des heures." },
-    { id: "hours",    when: (s) => Object.values(s.auto).some((a) => a.level > 0), who: "yanis", msg: "Nouveau : les heures gagnées", text: "Les heures gagnées viennent des tâches automatisées. Dépense-les pour améliorer tes automatisations." },
-    { id: "heat",     when: (s) => s.stats.autoDone >= 8,   who: "jadd",  msg: "Nouveau : la chaleur", text: "Les machines chauffent le bureau. Touche le « ? » pour comprendre. Recrute-moi, j'ouvre les fenêtres." },
-    { id: "rapport",  when: (s) => s.stats.tasksDone >= 45, who: "nahel", msg: "Nouveau type de tâche : rapport", text: "Des rapports à rédiger. Maintiens ton doigt appuyé." },
-    { id: "dir_yanis", when: (s) => s.flags.workflows && s.runMoney >= 200, who: "yanis", msg: "Yanis peut être recruté", text: "Avec moi dans l'équipe, tu peux monter tes automatisations plus haut et plus vite." },
-    { id: "dir_jadd", when: (s) => s.flags.heat, who: "jadd", msg: "Jadd peut être recruté", text: "Une fenêtre ouverte, c'est 20 % de chaleur en moins. Je dis ça, je dis rien." },
-    { id: "dir_noah", when: (s) => s.stats.autoDone >= 30, who: "noah", msg: "Noah peut être recruté", text: "Des attaques vont viser tes automatisations. Je peux en bloquer une partie." },
-    { id: "agency",   when: (s) => s.hoursRun >= 120, who: "nahel", tab: "agency", msg: "Nouvel onglet : Agence", text: "Quand tu auras gagné assez d'heures, tu pourras ouvrir K'X dans une nouvelle ville." },
-    { id: "success",  when: (s) => Object.keys(s.achievements).length >= 3, tab: "success", msg: "Nouvel onglet : Succès" },
-    { id: "devis",    when: (s) => s.city >= 1, who: "nahel", msg: "Nouveau type de tâche : devis", text: "Au Mans, il y a des devis à valider. Additionne les lignes et tape le bon total." },
-    { id: "contrat",  when: (s) => s.city >= 2, who: "nahel", msg: "Nouveau type de tâche : contrat", text: "À Paris, des contrats à signer. Maintiens le doigt un peu plus longtemps." },
+    { id: "facture",  when: (s) => s.stats.tasksDone >= 5,  who: "nahel", title: "Nouvelle tâche : la facture", text: "Des factures arrivent. Glisse chacune dans le bon dossier : Clients si c'est une vente, Fournisseurs si c'est un achat, Banque pour les frais bancaires. Une erreur te fait monter le stress." },
+    { id: "stress",   when: (s) => s.stats.tasksDone >= 14, who: "nahel", title: "Nouveau : le stress", text: "Si trop de tâches s'accumulent dans ta boîte, le stress monte. Plus il est haut, plus tes gains baissent, et à 100 % tes clients perdent en satisfaction. Touche le « ? » pour le détail." },
+    { id: "excel",    when: (s) => s.stats.tasksDone >= 24, who: "nahel", title: "Nouvelle tâche : le tableau Excel", text: "Des tableaux à remplir : tape les 3 cases qui brillent. Une mauvaise case fait monter le stress. Ça rapporte plus qu'une relance." },
+    { id: "clients",  when: (s) => s.stats.tasksDone >= 34 && s.stats.moneyEarned >= 60, who: "nahel", tab: "clients", title: "Nouvel onglet : Clients", text: "Pour trouver des clients, il faut faire de la publicité. Lance une campagne : après quelques secondes, des clients se présentent. La première campagne est offerte. Signe un client : il paie un abonnement tant qu'il est bien servi." },
+    { id: "team",     when: (s) => s.stats.clientsSigned >= 1, who: "nahel", tab: "team", title: "Nouvel onglet : Équipe", text: "Chaque client demande du temps de travail et un niveau de compétence. Pour les servir, embauche du monde : lance une campagne de recrutement. Plus ta crédibilité est haute, plus les profils sont forts. Attention, ton bureau limite le nombre d'employés." },
+    { id: "workflows", when: (s) => s.stats.moneyEarned >= 160 && s.stats.clientsSigned >= 1, who: "yanis", tab: "workflows", title: "Nouvel onglet : Workflows", text: "On peut automatiser une tâche répétitive. Installe l'automatisation d'un type de tâche : elle se met en place après un délai, puis traite ces tâches toute seule. Tu peux la monter de niveau pour aller plus vite et gérer les tâches plus difficiles." },
+    { id: "hours",    when: (s) => s.stats.autoDone >= 1, who: "yanis", title: "Nouveau : les heures gagnées", text: "Chaque tâche traitée automatiquement te fait gagner des heures. À la main, tu gagnes seulement de l'argent. Dépense tes heures pour monter tes automatisations. Leur total te rapproche aussi d'une nouvelle agence." },
+    { id: "rapport",  when: (s) => s.stats.tasksDone >= 60, who: "nahel", title: "Nouvelle tâche : le rapport", text: "Des rapports à rédiger : maintiens ton doigt appuyé jusqu'à ce que la barre soit pleine. Ça rapporte bien." },
+    { id: "dir_yanis", when: (s) => s.flags.hours && s.stats.autoDone >= 6, who: "yanis", title: "Yanis peut être recruté", text: "Avec moi dans l'équipe, tu peux monter tes automatisations au niveau 5 et plus, et elles vont plus vite. Tous les 5 niveaux, je multiplie par 1,5 les heures que tu gagnes." },
+    { id: "dir_jadd", when: (s) => s.flags.stress && s.stats.clientsSigned >= 2 && s.stats.moneyEarned >= 400, who: "jadd", title: "Jadd peut être recruté", text: "Je guette la fenêtre. Dès que quelque chose passe, je l'ouvre, et il se passe un truc : parfois une bonne surprise, parfois moins. Plus je monte de niveau, plus je tombe au bon moment." },
+    { id: "office",   when: (s) => s.staff.length >= CONFIG.office.levels[Math.min(s.office, CONFIG.office.levels.length - 1)].staff && s.staff.length > 0, who: "nahel", title: "Ton bureau est plein", text: "Tu ne peux pas embaucher plus de monde que ton bureau n'a de places. Améliore le bureau dans l'onglet Équipe : il change aussi d'aspect en haut de l'écran." },
+    { id: "dir_noah", when: (s) => s.stats.autoDone >= CONFIG.attacks.startAutoDone, who: "noah", title: "Noah peut être recruté", text: "Des attaques vont viser tes automatisations. Si tu les laisses passer, l'automatisation se met en pause. Je peux en bloquer une partie, et tu repousses le reste en tapant sur l'alerte." },
+    { id: "agency",   when: (s) => s.hoursRun >= 120, who: "nahel", tab: "agency", title: "Nouvel onglet : Agence", text: "Quand tu auras gagné assez d'heures, tu pourras ouvrir K'X dans une nouvelle ville. Tu repars de zéro, mais avec de la réputation : des gains en plus et de plus gros clients." },
+    { id: "success",  when: (s) => Object.keys(s.achievements).length >= 3, tab: "success", who: "nahel", title: "Nouvel onglet : Succès", text: "Tu débloques des succès en jouant. Chacun donne un petit bonus : de l'argent ou des gains permanents." },
+    { id: "devis",    when: (s) => s.city >= 1, who: "nahel", title: "Nouvelle tâche : le devis", text: "Au Mans, il y a des devis à valider. Additionne les lignes et tape le bon total." },
+    { id: "contrat",  when: (s) => s.city >= 2, who: "nahel", title: "Nouvelle tâche : le contrat", text: "À Paris, des contrats à signer. Maintiens ton doigt un peu plus longtemps." },
   ],
 
-  // --- Tutoriel de depart (2 bulles) ---
+  // --- Tutoriel de depart (le jeu est en pause pendant les explications) ---
   tutorial: [
-    { who: "nahel", text: "Bienvenue chez K'X. Des tâches arrivent : traite-les à la main pour gagner des euros." },
-    { who: "nahel", text: "Relance : lis le message, puis tape « Envoyer ». Le reste se débloquera au fur et à mesure." },
+    { who: "nahel", text: "Bienvenue chez K'X. Des tâches arrivent dans ta boîte. Traite-les à la main pour gagner de l'argent." },
+    { who: "nahel", text: "Pour une relance : lis le message, puis tape « Envoyer ». Je te présenterai le reste au fur et à mesure." },
   ],
 
   // --- Textes d'aide des « ? » ---
   help: {
-    money: ["Argent", "Tu gagnes des euros en traitant des tâches à la main, avec les abonnements de tes clients et avec tes automatisations. Tu les dépenses pour embaucher, installer des automatisations et recruter."],
-    hours: ["Heures gagnées", "Chaque tâche traitée automatiquement te fait gagner du temps : ce sont les heures gagnées. Tu n'en gagnes pas en traitant à la main. Dépense-les pour améliorer tes automatisations. Leur total te rapproche aussi de l'ouverture d'une nouvelle agence."],
-    stress: ["Stress", "Le stress monte quand trop de tâches s'accumulent dans ta boîte (au-delà de sa capacité) et quand tu fais des erreurs. À 100 %, tes clients perdent en satisfaction. Il redescend quand la boîte se vide. Jadd aide à le faire baisser."],
-    heat: ["Chaleur", "Les automatisations et les serveurs chauffent le bureau. Au-delà de 40 %, tes automatisations ralentissent. Jadd ouvre les fenêtres pour faire baisser la chaleur."],
-    credibility: ["Crédibilité", "Si tu ne sers pas bien tes clients (pas assez de temps ou de compétence), ta crédibilité baisse. Plus elle est basse, moins de clients se présentent. Trop bas, un client peut t'attaquer en justice. Bien servir tes clients la fait remonter."],
+    money: ["Argent", "Tu gagnes des euros en traitant des tâches à la main, avec les abonnements de tes clients et avec tes automatisations. Tu les dépenses pour la publicité, les employés, le bureau, les automatisations et les directeurs."],
+    hours: ["Heures gagnées", "Chaque tâche traitée automatiquement te fait gagner du temps : ce sont les heures gagnées. Tu n'en gagnes pas en traitant à la main. Dépense-les pour monter tes automatisations. Leur total te rapproche aussi de l'ouverture d'une nouvelle agence."],
+    stress: ["Stress", "Le stress monte quand trop de tâches s'accumulent dans ta boîte (au-delà de sa capacité) et quand tu fais des erreurs. À partir de 30 %, tous tes gains baissent, jusqu'à -50 % à 100 %. À 100 %, tes clients perdent aussi en satisfaction. Il redescend quand la boîte se vide."],
+    credibility: ["Crédibilité", "Si tu ne sers pas bien tes clients (pas assez de temps ou de compétence), ta crédibilité baisse. Plus elle est haute, plus les profils proposés par tes campagnes de recrutement sont forts, et plus tu reçois de clients. Trop basse, un client peut t'attaquer en justice."],
   },
 };

@@ -23,7 +23,7 @@ const COND = {
   full_team:    () => ["yanis", "jadd", "noah"].every((k) => team()[k].on),
   firewall:     (s) => s.stats.attacksRepelled >= 10,
   fresh_air:    (s) => s.stats.windowsOpened >= 10,
-  servers_3:    (s) => s.servers >= 3,
+  office_3:     (s) => s.office >= 3,
   hours_100:    (s) => s.lifetimeHours >= 100,
   rich:         (s) => s.stats.moneyEarned >= 10000,
   agency_2:     (s) => s.city >= 1,

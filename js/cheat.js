@@ -36,7 +36,9 @@ const ACTIONS = [
   ["Prêt pour l'agence suivante", () => { state.hoursRun = Math.max(state.hoursRun, threshold()); }],
   ["Tout débloquer (onglets, types)", () => { for (const u of CONFIG.unlocks) state.flags[u.id] = true; }],
   ["Recruter toute la direction", () => { for (const k of ["yanis", "jadd", "noah"]) state.team[k].on = true; }],
-  ["Stress et chaleur à zéro", () => { state.stress = 0; state.heat = 0; }],
+  ["Stress à zéro", () => { state.stress = 0; }],
+  ["Bureau au maximum", () => { state.office = CONFIG.office.levels.length - 1; }],
+  ["Crédibilité à 100 %", () => { state.credibility = 100; }],
   ["Lancer une attaque", () => { const t = Object.keys(state.auto).find((k) => state.auto[k].level > 0); if (t) state.attack = { type: t, hp: CONFIG.attacks.tapsToRepel, deadline: state.stats.playSeconds + CONFIG.attacks.windowSec }; else toast("Installe d'abord une automatisation."); }],
 ];
 

@@ -10,7 +10,6 @@ import { spawnTask, availableTypes } from "./tasks.js";
 import { service, payroll, freeStaff, serviceFor } from "./staff.js";
 
 const C = CONFIG.clients, K = CONFIG.credibility;
-let offerIn = C.startOfferInSec;
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export const payFactor = (sat) => (sat >= C.payFullAbove ? 1 : sat / C.payFullAbove);
@@ -25,13 +24,7 @@ export function previewService(o) {
   return serviceFor(o.need, time, skill);
 }
 
-function offerInterval() {
-  const cr = state.credibility / 100;
-  const cred = K.offerIntervalAt0 + (K.offerIntervalAt100 - K.offerIntervalAt0) * cr;
-  return C.offerEverySec * Math.pow(C.offerRepFactor, state.reputation) * cred * (0.8 + Math.random() * 0.4);
-}
-
-function makeOffer() {
+export function makeOffer() {
   const sectors = Object.entries(CONFIG.sectors).filter(([, s]) => s.city <= state.city && state.runMoney >= s.minMoney);
   const [sid, sec] = pick(sectors);
   const taken = new Set([...state.clients, ...state.offers].map((x) => x.name));
@@ -76,11 +69,6 @@ export function removeClient(id, resigned) {
 }
 
 function tick(dt) {
-  // nouvelles demandes
-  if (state.offers.length < C.maxOffers) {
-    offerIn -= dt;
-    if (offerIn <= 0) { state.offers.push(makeOffer()); offerIn = offerInterval(); sfx.tap(); }
-  }
   const now = state.stats.playSeconds;
   const types = availableTypes();
   let sumService = 0;
@@ -129,6 +117,5 @@ on("task", ({ task, auto, age }) => {
 on("bug", ({ client }) => { if (client != null) bump(client, C.onBug); });
 on("taskLost", (t) => bump(t.client, -1));
 on("resign", () => { state.credibility = clamp(state.credibility + K.onResign, 0, 100); });
-on("agencyReset", () => { offerIn = C.startOfferInSec; });
 
 export function initClients() { addSystem(tick); }

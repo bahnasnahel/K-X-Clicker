@@ -10,7 +10,6 @@ export function defaults() {
     lifetimeHours: 0,     // toutes agences confondues
     runMoney: 0,          // argent gagne dans l'agence courante (deblocage des employes)
     stress: 0,
-    heat: 0,
     city: 0,
     reputation: 0,
     credibility: CONFIG.credibility.start,
@@ -26,7 +25,10 @@ export function defaults() {
     staff: [],            // ids des employes embauches (data/employees.json)
     assign: {},           // id du membre du personnel -> id du client
     autoAssign: true,
-    servers: 0,
+    office: 0,            // niveau du bureau : limite le nombre d'employes
+    ads: { client: null, recruit: null },   // campagnes en cours : { end } (temps de jeu)
+    candidates: [],       // profils proposes par les campagnes de recrutement
+    photos: {},           // cle (client ou employe) -> photo, sans doublon
     attack: null,
     team: {
       nahel: { on: true,  lvl: 0 },
@@ -38,7 +40,7 @@ export function defaults() {
     stats: {
       tasksDone: 0, autoDone: 0, playSeconds: 0, bugs: 0, cleanSince: null,
       attacksRepelled: 0, windowsOpened: 0, clientsSigned: 0, clientsSatisfied: 0,
-      moneyEarned: 0, lawsuits: 0,
+      moneyEarned: 0, lawsuits: 0, adsLaunched: 0,
     },
     settings: { muted: false, tutorialDone: false, speed: 1, gain: 1 },   // speed et gain : mode triche
     meta: { created: now, lastSave: now, lastActive: now },
@@ -112,10 +114,28 @@ export function gainMult() {
   return (1 + state.reputation * CONFIG.prestige.repBonus + state.bonusMult) * (state.settings.gain || 1);
 }
 
-// Ajoute des gains (avec bonus de reputation et de succes). Retourne les gains reels.
-export function earn(euro, hours, extra = 1) {
-  const m = gainMult() * extra;
-  const e = euro * m, h = hours * m;
+// Nahel : +10 % d'argent par niveau, x1,5 tous les 5 niveaux
+export function nahelMult() {
+  const N = CONFIG.team.nahel, l = state.team.nahel.lvl;
+  return (1 + N.moneyPerLevel * l) * Math.pow(N.bigBoost, Math.floor(l / N.bigBoostEvery));
+}
+// Yanis : x1,5 sur les heures automatisees tous les 5 niveaux
+export function yanisHoursMult() {
+  const Y = CONFIG.team.yanis, y = state.team.yanis;
+  return y.on ? Math.pow(Y.hoursBoost, Math.floor(y.lvl / Y.hoursEvery)) : 1;
+}
+// Le stress reduit tous les gains
+export function stressMult() {
+  const S = CONFIG.stress;
+  const f = Math.min(1, Math.max(0, (state.stress - S.gainPenaltyStart) / (S.max - S.gainPenaltyStart)));
+  return 1 - S.gainPenaltyMax * f;
+}
+
+// Ajoute des gains (reputation, succes, Nahel, stress). Retourne les gains reels.
+// Les heures viennent uniquement de l'automatisation.
+export function earn(euro, hours, extra = 1, hoursExtra = 1) {
+  const m = gainMult() * stressMult();
+  const e = euro * m * nahelMult() * extra, h = hours * m * hoursExtra;
   state.money += e;
   state.runMoney += e;
   state.stats.moneyEarned += e;
@@ -123,9 +143,5 @@ export function earn(euro, hours, extra = 1) {
   return { euro: e, hours: h };
 }
 
-// niveau du bureau (nombre d'ecrans) selon le nombre d'employes
-export function deskLevel() {
-  let lvl = 0;
-  CONFIG.desk.forEach((d, i) => { if (state.staff.length >= d.minStaff) lvl = i; });
-  return lvl;
-}
+export const office = () => CONFIG.office.levels[Math.min(state.office, CONFIG.office.levels.length - 1)];
+export const staffCap = () => office().staff;
