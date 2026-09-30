@@ -63,6 +63,10 @@ function tick(dt) {
     spawnTask();
     spawnTimer = CONFIG.queue.baseSpawnEverySec * (0.7 + Math.random() * 0.6);
   }
+  // boite presque vide : on ne fait pas attendre le joueur
+  if (state.queue.length < CONFIG.queue.refillBelow && spawnTimer > CONFIG.queue.refillSec) {
+    spawnTimer = CONFIG.queue.refillSec;
+  }
   const over = state.queue.length - CONFIG.queue.capacity;
   if (over > 0) state.stress += over * CONFIG.stress.overflowPerSec * dt;
   else state.stress -= CONFIG.stress.decayPerSec * dt;

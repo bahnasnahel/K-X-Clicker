@@ -80,7 +80,7 @@ export default {
       ad.append(abtn);
       const abar = ad.querySelector(".adbar b"), aline = ad.querySelector(".adline");
       live(() => {
-        if (adRunning("client")) { const left = adLeft("client"); abar.style.width = (100 - (left / CONFIG.ads.client.durationSec) * 100) + "%"; setText(aline, `Campagne en cours : ${Math.ceil(left)} s`); }
+        if (adRunning("client")) { const left = adLeft("client"); abar.style.width = (100 - (left / (state.ads.client.total || CONFIG.ads.client.durationSec)) * 100) + "%"; setText(aline, `Campagne en cours : ${Math.ceil(left)} s`); }
         else { abar.style.width = "0"; setText(aline, state.offers.length >= CONFIG.ads.client.maxPending ? "Trop de demandes en attente : signe-en avant de relancer." : ""); }
       });
       r.append(ad);

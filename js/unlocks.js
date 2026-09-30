@@ -13,9 +13,9 @@ function tick(dt) {
   if (acc < 0.5 || busy) return;
   acc = 0;
   if (document.querySelector(".tuto, .overlay")) return;                   // une fenetre est deja ouverte
-  if (state.stats.playSeconds - lastAt < CONFIG.unlockGapSec) return;      // on laisse jouer un peu
   for (const u of CONFIG.unlocks) {
     if (state.flags[u.id] || !u.when(state)) continue;
+    if (state.stats.playSeconds - lastAt < (u.gap ?? CONFIG.unlockGapSec)) break;   // on laisse jouer un peu
     state.flags[u.id] = true;
     lastAt = state.stats.playSeconds;
     busy = true;

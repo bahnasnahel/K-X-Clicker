@@ -36,9 +36,11 @@ const staffCapNow = () => CONFIG.office.levels[Math.min(state.office, CONFIG.off
 
 export function launchClientAd() {
   if (!canClientAd()) return false;
+  const first = isFirstAd();
   state.money -= clientAdCost();
   state.stats.adsLaunched = (state.stats.adsLaunched || 0) + 1;
-  state.ads.client = { end: state.stats.playSeconds + A.client.durationSec };
+  const dur = first ? A.client.firstDurationSec : A.client.durationSec;
+  state.ads.client = { end: state.stats.playSeconds + dur, total: dur };
   sfx.ok();
   return true;
 }

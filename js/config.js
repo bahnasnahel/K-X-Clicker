@@ -64,7 +64,9 @@ export const CONFIG = {
   queue: {
     capacity: 8,           // au-dela, le stress monte
     hardCapMult: 2,        // la file n'accepte plus de tache a capacity x 2
-    baseSpawnEverySec: 8,  // taches "maison" (sans client), delai moyen
+    baseSpawnEverySec: 4,  // taches "maison" (sans client), delai moyen
+    refillBelow: 2,        // si la boite a moins de taches que ca, la suivante arrive en 1,5 s maximum
+    refillSec: 1.5,
     startTasks: ["relance", "relance"],
     overdueSec: 45,        // une tache de client en attente depuis plus longtemps le mecontente
   },
@@ -106,6 +108,7 @@ export const CONFIG = {
     client: {
       cost: 35, perClient: 0.2, cityBonus: 0.6,   // cout = cost x (1 + 0,2 x clients) x (1 + 0,6 x ville)
       durationSec: 14,
+      firstDurationSec: 5,      // la toute premiere campagne est rapide
       offers: [1, 2],           // demandes obtenues (+1 si credibilite >= 60)
       bonusCred: 60,
       maxPending: 4,            // demandes en attente maximum
@@ -316,16 +319,16 @@ export const CONFIG = {
   // Chaque deblocage met le jeu en PAUSE avec une explication (bulle avec photo), puis le jeu reprend.
   // On laisse jouer au moins unlockGapSec secondes entre deux explications.
   // when : condition (recoit l'etat du jeu) ; who/title/text : explication ; tab : onglet qui apparait
-  unlockGapSec: 40,
+  unlockGapSec: 10,      // par defaut ; un deblocage peut avoir son propre `gap` (les plus gros contenus)
   unlocks: [
-    { id: "facture",  when: (s) => s.stats.tasksDone >= 5,  who: "nahel", title: "Nouvelle tâche : la facture", text: "Des factures arrivent. Glisse chacune dans le bon dossier : Clients si c'est une vente, Fournisseurs si c'est un achat, Banque pour les frais bancaires. Une erreur te fait monter le stress." },
-    { id: "stress",   when: (s) => s.stats.tasksDone >= 14, who: "nahel", title: "Nouveau : le stress", text: "Si trop de tâches s'accumulent dans ta boîte, le stress monte. Plus il est haut, plus tes gains baissent, et à 100 % tes clients perdent en satisfaction. Touche le « ? » pour le détail." },
-    { id: "excel",    when: (s) => s.stats.tasksDone >= 24, who: "nahel", title: "Nouvelle tâche : le tableau Excel", text: "Des tableaux à remplir : tape les 3 cases qui brillent. Une mauvaise case fait monter le stress. Ça rapporte plus qu'une relance." },
-    { id: "clients",  when: (s) => s.stats.tasksDone >= 34 && s.stats.moneyEarned >= 60, who: "nahel", tab: "clients", title: "Nouvel onglet : Clients", text: "Pour trouver des clients, il faut faire de la publicité. Lance une campagne : après quelques secondes, des clients se présentent. La première campagne est offerte. Signe un client : il paie un abonnement tant qu'il est bien servi." },
+    { id: "facture",  when: (s) => s.stats.tasksDone >= 4,  who: "nahel", title: "Nouvelle tâche : la facture", text: "Des factures arrivent. Glisse chacune dans le bon dossier : Clients si c'est une vente, Fournisseurs si c'est un achat, Banque pour les frais bancaires. Une erreur te fait monter le stress." },
+    { id: "stress",   when: (s) => s.stats.tasksDone >= 10, who: "nahel", title: "Nouveau : le stress", text: "Si trop de tâches s'accumulent dans ta boîte, le stress monte. Plus il est haut, plus tes gains baissent, et à 100 % tes clients perdent en satisfaction. Touche le « ? » pour le détail." },
+    { id: "excel",    when: (s) => s.stats.tasksDone >= 15, who: "nahel", title: "Nouvelle tâche : le tableau Excel", text: "Des tableaux à remplir : tape les 3 cases qui brillent. Une mauvaise case fait monter le stress. Ça rapporte plus qu'une relance." },
+    { id: "clients",  when: (s) => s.stats.tasksDone >= 18 && s.stats.moneyEarned >= 50, gap: 15, who: "nahel", tab: "clients", title: "Nouvel onglet : Clients", text: "Pour trouver des clients, il faut faire de la publicité. Lance une campagne : après quelques secondes, des clients se présentent. La première campagne est offerte. Signe un client : il paie un abonnement tant qu'il est bien servi." },
     { id: "team",     when: (s) => s.stats.clientsSigned >= 1, who: "nahel", tab: "team", title: "Nouvel onglet : Équipe", text: "Chaque client demande du temps de travail et un niveau de compétence. Pour les servir, embauche du monde : lance une campagne de recrutement. Plus ta crédibilité est haute, plus les profils sont forts. Attention, ton bureau limite le nombre d'employés." },
-    { id: "workflows", when: (s) => s.stats.moneyEarned >= 160 && s.stats.clientsSigned >= 1, who: "yanis", tab: "workflows", title: "Nouvel onglet : Workflows", text: "On peut automatiser une tâche répétitive. Installe l'automatisation d'un type de tâche : elle se met en place après un délai, puis traite ces tâches toute seule. Tu peux la monter de niveau pour aller plus vite et gérer les tâches plus difficiles." },
+    { id: "workflows", gap: 30, when: (s) => s.stats.moneyEarned >= 160 && s.stats.clientsSigned >= 1, who: "yanis", tab: "workflows", title: "Nouvel onglet : Workflows", text: "On peut automatiser une tâche répétitive. Installe l'automatisation d'un type de tâche : elle se met en place après un délai, puis traite ces tâches toute seule. Tu peux la monter de niveau pour aller plus vite et gérer les tâches plus difficiles." },
     { id: "hours",    when: (s) => s.stats.autoDone >= 1, who: "yanis", title: "Nouveau : les heures gagnées", text: "Chaque tâche traitée automatiquement te fait gagner des heures. À la main, tu gagnes seulement de l'argent. Dépense tes heures pour monter tes automatisations. Leur total te rapproche aussi d'une nouvelle agence." },
-    { id: "rapport",  when: (s) => s.stats.tasksDone >= 60, who: "nahel", title: "Nouvelle tâche : le rapport", text: "Des rapports à rédiger : maintiens ton doigt appuyé jusqu'à ce que la barre soit pleine. Ça rapporte bien." },
+    { id: "rapport",  when: (s) => s.stats.tasksDone >= 40, who: "nahel", title: "Nouvelle tâche : le rapport", text: "Des rapports à rédiger : maintiens ton doigt appuyé jusqu'à ce que la barre soit pleine. Ça rapporte bien." },
     { id: "dir_yanis", when: (s) => s.flags.hours && s.stats.autoDone >= 6, who: "yanis", title: "Yanis peut être recruté", text: "Avec moi dans l'équipe, tu peux monter tes automatisations au niveau 5 et plus, et elles vont plus vite. Tous les 5 niveaux, je multiplie par 1,5 les heures que tu gagnes." },
     { id: "dir_jadd", when: (s) => s.flags.stress && s.stats.clientsSigned >= 2 && s.stats.moneyEarned >= 400, who: "jadd", title: "Jadd peut être recruté", text: "Je guette la fenêtre. Dès que quelque chose passe, je l'ouvre, et il se passe un truc : parfois une bonne surprise, parfois moins. Plus je monte de niveau, plus je tombe au bon moment." },
     { id: "office",   when: (s) => s.staff.length >= CONFIG.office.levels[Math.min(s.office, CONFIG.office.levels.length - 1)].staff && s.staff.length > 0, who: "nahel", title: "Ton bureau est plein", text: "Tu ne peux pas embaucher plus de monde que ton bureau n'a de places. Améliore le bureau dans l'onglet Équipe : il change aussi d'aspect en haut de l'écran." },
