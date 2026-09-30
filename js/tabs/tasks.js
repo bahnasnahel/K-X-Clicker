@@ -3,16 +3,19 @@ import { CONFIG } from "../config.js";
 import { state } from "../state.js";
 import { sfx } from "../audio.js";
 import { icon } from "../icons.js";
-import { completeTask, mistake } from "../tasks.js";
+import { completeTask, mistake, holdMs } from "../tasks.js";
+import { findClient } from "../clients.js";
+import { activeTypes, wf, status } from "../workflows.js";
 
 const HINT = {
-  facture: "Glisse la facture vers le bon dossier.",
-  relance: "Lis le message, puis envoie-le.",
-  excel:   "Tape les 3 cases qui brillent.",
-  rapport: "Maintiens ton doigt appuyé pour rédiger.",
+  drag:   "Glisse la facture vers le bon dossier.",
+  tap:    "Lis le message, puis envoie-le.",
+  cells:  "Tape les 3 cases qui brillent.",
+  hold:   "Maintiens ton doigt appuyé pour rédiger.",
+  choice: "Additionne les lignes, puis tape le bon total.",
 };
 
-let head, capEl, stage, fx, list;
+let head, capEl, stage, fx, list, autoEl;
 let focusId = null, stageId = null, listSig = "";
 
 const byId = (id) => state.queue.find((t) => t.id === id);
@@ -103,11 +106,11 @@ function buildExcel(t) {
   return w;
 }
 
-function buildRapport(t) {
-  const ms = CONFIG.tasks.rapport.holdMs;
+function buildHold(t) {
+  const ms = holdMs(t.type);
   const w = el("div", "g-rapport");
-  w.append(el("div", "doc wide", `<b>RAPPORT</b><span class="l1">${t.data.title}</span><span class="l2 lines"><i></i><i></i><i></i></span>`));
-  const b = el("button", "hold", `<i class="fill"></i><span>Maintenir pour rédiger</span>`);
+  w.append(el("div", "doc wide", `<b>${t.type === "contrat" ? "CONTRAT" : "RAPPORT"}</b><span class="l1">${t.data.title}</span><span class="l2 lines"><i></i><i></i><i></i></span>`));
+  const b = el("button", "hold", `<i class="fill"></i><span>${t.type === "contrat" ? "Maintenir pour signer" : "Maintenir pour rédiger"}</span>`);
   const fill = b.querySelector(".fill");
   let timer = null;
   const stop = () => {
@@ -129,7 +132,21 @@ function buildRapport(t) {
   return w;
 }
 
-const BUILD = { facture: buildFacture, relance: buildRelance, excel: buildExcel, rapport: buildRapport };
+function buildChoice(t) {
+  const w = el("div", "g-choice");
+  const rows = t.data.lines.map((x) => `<span class="dl"><i>${x.l}</i><i>${x.a} EUR</i></span>`).join("");
+  w.append(el("div", "doc wide", `<b>DEVIS</b><span class="l1">${t.data.title}</span>${rows}`));
+  const opts = el("div", "opts");
+  t.data.options.forEach((v) => {
+    const b = el("button", "btn opt", `${v} EUR`);
+    b.onclick = () => { if (v === t.data.answer) finish(t, w); else { mistake(); shake(b); } };
+    opts.append(b);
+  });
+  w.append(opts);
+  return w;
+}
+
+const BUILD = { drag: buildFacture, tap: buildRelance, cells: buildExcel, hold: buildHold, choice: buildChoice };
 
 function buildStage(t) {
   stage.innerHTML = "";
@@ -140,8 +157,8 @@ function buildStage(t) {
   const cfg = CONFIG.tasks[t.type];
   stage.append(
     el("div", "stitle", `<span class="t-${t.type}">${icon(t.type, 20)}</span><span>${cfg.label}</span>`),
-    el("p", "shint", HINT[t.type]),
-    BUILD[t.type](t)
+    el("p", "shint", t.client != null && findClient(t.client) ? `Pour ${findClient(t.client).name}. ${HINT[cfg.gesture]}` : HINT[cfg.gesture]),
+    BUILD[cfg.gesture](t)
   );
 }
 
@@ -164,7 +181,8 @@ export default {
     fx = el("div", "fxlayer");
     const wrap = el("div", "stagewrap"); wrap.append(stage, fx);
     list = el("div", "qlist");
-    root.append(head, wrap, el("p", "qlabel", "En attente"), list);
+    autoEl = el("p", "autoline");
+    root.append(head, wrap, el("p", "qlabel", "En attente"), list, autoEl);
   },
   update() {
     const q = state.queue;
@@ -173,6 +191,10 @@ export default {
     const txt = `${q.length} / ${cap}`;
     if (capEl.textContent !== txt) capEl.textContent = txt;
     capEl.classList.toggle("over", q.length > cap);
+
+    const at = activeTypes();
+    const autoTxt = at.length ? "Traité automatiquement : " + at.map((k) => `${CONFIG.tasks[k].label.split(" ")[0]} (${wf(k).backlog.length}${status(k) === "ok" ? "" : ", arrêté"})`).join(" · ") : "";
+    if (autoEl.textContent !== autoTxt) autoEl.textContent = autoTxt;
 
     const sig = q.map((t) => t.id).join(",") + "|" + focusId;
     if (sig !== listSig) { listSig = sig; buildList(); }

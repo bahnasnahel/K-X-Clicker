@@ -21,3 +21,26 @@ export function el(tag, cls, html) {
   if (html != null) e.innerHTML = html;
   return e;
 }
+
+// Vue "vivante" : reconstruit le DOM seulement quand la signature change,
+// et met a jour les petits champs dynamiques a chaque image.
+export function liveView(root, getSig, build) {
+  let last = null, live = [];
+  return {
+    update() {
+      const s = getSig();
+      if (s !== last) {
+        last = s; live = [];
+        root.replaceChildren();
+        build(root, (fn) => live.push(fn));
+      }
+      for (const f of live) f();
+    },
+  };
+}
+
+// ecrit un texte seulement s'il change
+export function setText(node, v) { if (node.textContent !== v) node.textContent = v; }
+
+export const fmt1 = (n) => n.toFixed(1).replace(".", ",");
+export const fmt2 = (n) => n.toFixed(2).replace(".", ",");

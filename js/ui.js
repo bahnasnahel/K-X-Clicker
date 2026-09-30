@@ -1,37 +1,33 @@
-import { el, fmt, fmtHours } from "./util.js";
+import { el, fmt, fmtHours, setText } from "./util.js";
 import { CONFIG } from "./config.js";
 import { state, save, reset, deskLevel } from "./state.js";
 import { icon } from "./icons.js";
-import { sfx, setMuted } from "./audio.js";
-import { stubTab } from "./tabs/stub.js";
+import { sfx } from "./audio.js";
+import { setMuted } from "./audio.js";
+import { modal, confirmDialog } from "./modal.js";
+import { hitAttack } from "./crew.js";
+import { startTutorial } from "./tutorial.js";
 import tasks from "./tabs/tasks.js";
+import workflows from "./tabs/workflows.js";
+import clients from "./tabs/clients.js";
 import team from "./tabs/team.js";
+import agency from "./tabs/agency.js";
+import success from "./tabs/success.js";
 
-const tabs = [
-  tasks,
-  stubTab("workflows", "Workflows", "workflows", "Éditeur de workflows", "Automatise tes tâches en assemblant des blocs. Bientôt disponible."),
-  stubTab("clients", "Clients", "clients", "Clients", "Signe des clients pour des revenus passifs. Bientôt disponible."),
-  team,
-  stubTab("agency", "Agence", "agency", "Nouvelle agence", "Ouvre K'X dans une nouvelle ville. Bientôt disponible."),
-  stubTab("success", "Succès", "trophy", "Succès", "Une vingtaine de succès à débloquer. Bientôt disponible."),
-];
-
+const tabs = [tasks, workflows, clients, team, agency, success];
 let current = "tasks";
-const panels = {};
+const panels = {}, buttons = {};
 const $ = (s) => document.querySelector(s);
-const last = {};   // valeurs deja affichees, pour ne toucher au DOM que si ca change
-
-function setText(key, node, v) { if (last[key] !== v) { last[key] = v; node.textContent = v; } }
 
 export function initUI() {
-  // barre d'onglets + panneaux
   const nav = $("#tabbar"), main = $("#main");
   for (const t of tabs) {
-    const b = el("button", "tab", `${icon(t.icon, 22)}<span>${t.label}</span>`);
+    const b = el("button", "tab", `${icon(t.icon, 22)}<span>${t.label}</span><i class="dot"></i>`);
     b.dataset.tab = t.id;
     b.setAttribute("role", "tab");
     b.onclick = () => showTab(t.id);
     nav.append(b);
+    buttons[t.id] = b;
     const p = el("section", "panel");
     p.id = "panel-" + t.id; p.hidden = true;
     main.append(p);
@@ -40,13 +36,20 @@ export function initUI() {
   }
   showTab(current, true);
 
-  // boutons d'entete
   $("#btn-sound").innerHTML = icon("sound", 22);
   $("#btn-gear").innerHTML = icon("gear", 22);
   $("#btn-sound").onclick = () => { setMuted(!state.settings.muted); sfx.tap(); syncSound(); save(); };
   $("#btn-gear").onclick = openSettings;
   syncSound();
+
+  // alerte d'attaque (visible depuis tous les onglets)
+  const al = el("button", "alert hidden", `<b>ATTAQUE</b><span class="atxt"></span><i class="abar"><b></b></i>`);
+  al.onclick = () => hitAttack();
+  al.addEventListener("pointerdown", (e) => e.preventDefault());
+  document.body.append(al);
+  ui.alert = al;
 }
+const ui = {};
 
 function syncSound() {
   const b = $("#btn-sound");
@@ -57,56 +60,36 @@ function syncSound() {
 export function showTab(id, silent) {
   current = id;
   if (!silent) sfx.tab();
-  document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("on", b.dataset.tab === id));
+  for (const [k, b] of Object.entries(buttons)) b.classList.toggle("on", k === id);
   for (const [k, p] of Object.entries(panels)) p.hidden = k !== id;
   $("#main").scrollTop = 0;
 }
 
+const last = {};
+function set(key, node, v) { if (last[key] !== v) { last[key] = v; node.textContent = v; } }
+
 // appele a chaque image
 export function updateUI() {
-  setText("money", $("#c-money"), fmt(state.money));
-  setText("hours", $("#c-hours"), fmtHours(state.hoursSaved));
-  setText("stress", $("#c-stress"), Math.round(state.stress) + " %");
-  setText("heat", $("#c-heat"), Math.round(state.heat) + " %");
+  set("money", $("#c-money"), fmt(state.money));
+  set("hours", $("#c-hours"), fmtHours(state.hoursSaved));
+  set("stress", $("#c-stress"), Math.round(state.stress) + " %");
+  set("heat", $("#c-heat"), Math.round(state.heat) + " %");
   $("#bar-stress").style.width = state.stress + "%";
   $("#bar-heat").style.width = state.heat + "%";
   $("#stress-cell").classList.toggle("hot", state.stress >= 100);
   $("#heat-cell").classList.toggle("hot", state.heat >= 80);
-  setText("deskLabel", $("#desk-label"), CONFIG.desk[deskLevel()].label);
+  set("deskLabel", $("#desk-label"), `${CONFIG.prestige.cities[state.city]} · ${CONFIG.desk[deskLevel()].label}`);
+
   const t = tabs.find((x) => x.id === current);
   if (t) t.update(state);
-}
+  for (const x of tabs) buttons[x.id].classList.toggle("badged", !!(x.badge && x.id !== current && x.badge()));
 
-// ---------- Fenetres modales ----------
-function modal(build) {
-  return new Promise((resolve) => {
-    const ov = el("div", "overlay");
-    const box = el("div", "modal");
-    const close = (v) => { ov.remove(); resolve(v); };
-    build(box, close);
-    ov.append(box);
-    ov.addEventListener("click", (e) => { if (e.target === ov) close(null); });
-    document.body.append(ov);
-  });
-}
-
-export function confirmDialog(title, text, okLabel = "Confirmer") {
-  return modal((box, close) => {
-    box.append(el("h3", "h", title), el("p", "", text));
-    const row = el("div", "row");
-    const no = el("button", "btn ghost", "Annuler"), ok = el("button", "btn danger", okLabel);
-    no.onclick = () => close(false); ok.onclick = () => close(true);
-    row.append(no, ok); box.append(row);
-  });
-}
-
-export function infoDialog(title, html, okLabel = "OK") {
-  return modal((box, close) => {
-    box.append(el("h3", "h", title));
-    const d = el("div", "", html); box.append(d);
-    const ok = el("button", "btn", okLabel); ok.onclick = () => close(true);
-    box.append(ok);
-  });
+  const a = state.attack;
+  ui.alert.classList.toggle("hidden", !a);
+  if (a) {
+    set("atk", ui.alert.querySelector(".atxt"), `${CONFIG.tasks[a.type].label} : tape pour repousser (${a.hp})`);
+    ui.alert.querySelector(".abar b").style.width = Math.max(0, ((a.deadline - state.stats.playSeconds) / CONFIG.attacks.windowSec) * 100) + "%";
+  }
 }
 
 function openSettings() {
@@ -115,12 +98,14 @@ function openSettings() {
     box.append(el("h3", "h", "Réglages"));
     const snd = el("button", "btn ghost", state.settings.muted ? "Son : coupé" : "Son : activé");
     snd.onclick = () => { setMuted(!state.settings.muted); snd.textContent = state.settings.muted ? "Son : coupé" : "Son : activé"; syncSound(); save(); sfx.tap(); };
+    const tu = el("button", "btn ghost", "Revoir le tutoriel");
+    tu.onclick = () => { close(); startTutorial(); };
     const rs = el("button", "btn danger", "Réinitialiser la partie");
     rs.onclick = async () => {
       const ok = await confirmDialog("Tout effacer ?", "Ta progression (argent, clients, workflows, agences) sera définitivement perdue.", "Effacer");
       if (ok) { reset(); location.reload(); }
     };
     const cl = el("button", "btn", "Fermer"); cl.onclick = () => close(true);
-    box.append(snd, rs, cl, el("p", "muted small", "K'X Clicker V1 · " + CONFIG.slogan));
+    box.append(snd, tu, rs, cl, el("p", "muted small", "K'X Clicker V1 · " + CONFIG.slogan));
   });
 }

@@ -142,3 +142,95 @@ h3.h{color:var(--or)}
 #toasts{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) + 8px);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:60;pointer-events:none}
 .toast{max-width:min(92vw,420px);background:var(--n2);border:2px solid var(--or);padding:10px 14px;font-size:14px;font-weight:600;animation:drop .25s ease-out}
 @keyframes drop{from{transform:translateY(-14px);opacity:0}}
+
+/* ---- generique ---- */
+.gold{color:var(--or);font:11px var(--px)}
+.kind{font-size:12px;font-weight:600;color:var(--m)}
+.sdesc{font-size:13px;opacity:.8;line-height:1.35}
+.mbody p{margin:0 0 10px;font-size:14px;line-height:1.5}
+.mbody .muted{margin:0 0 6px}
+.btn:disabled{opacity:.4;filter:grayscale(.6)}
+.btn:disabled:active{transform:none;border-bottom-width:4px}
+.small-btn{flex:none;width:auto;min-width:92px;min-height:48px;margin:0;padding:6px 10px;font:700 13px/1.25 var(--tx)}
+.small-btn small{font:700 11px var(--tx);opacity:.85}
+.small-btn.wide{width:100%;margin-top:8px}
+.card{position:relative}
+.tab .dot{position:absolute;top:6px;right:22%;width:9px;height:9px;background:var(--m);border:2px solid var(--n2);display:none}
+.tab.badged .dot{display:block}
+
+/* ---- bulles avec photo ---- */
+#bubbles{position:fixed;left:0;right:0;bottom:calc(68px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:6px;z-index:40;pointer-events:none;padding:0 12px}
+.bubble{display:flex;gap:10px;align-items:center;width:100%;max-width:440px;background:var(--n2);border:3px solid var(--m);padding:8px 10px;animation:drop .25s ease-out}
+.bubble .frame,.tuto .frame{width:52px;height:52px}
+.bubble p,.tuto p{margin:0;font-size:14px;line-height:1.4}
+.bubble p b,.tuto p b{display:block;font:9px var(--px);color:var(--or);margin-bottom:5px}
+.frame.active{box-shadow:0 0 0 2px var(--or),0 0 10px rgba(255,212,121,.6)}
+.tuto{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--n1);border-top:3px solid var(--m);padding:14px 16px calc(14px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto}
+.tbody{display:flex;gap:12px;align-items:flex-start}
+.tfoot{display:flex;gap:8px;align-items:center;margin-top:12px}
+.tfoot span{flex:1;font:9px var(--px);opacity:.6}
+.tfoot .btn{width:auto;margin:0;min-width:92px}
+.tfoot .skip{background:var(--n3);color:var(--l);border-bottom-color:var(--n1)}
+
+/* ---- alerte d'attaque ---- */
+.alert{position:fixed;left:12px;right:12px;bottom:calc(68px + env(safe-area-inset-bottom));max-width:496px;margin:0 auto;z-index:45;min-height:64px;background:#ff5d7a;color:var(--n1);border:3px solid var(--l);padding:8px 12px;text-align:left;display:flex;flex-direction:column;gap:4px;animation:blinkbg .6s steps(2) infinite}
+.alert.hidden{display:none}
+.alert b{font:10px var(--px)} .alert .atxt{font-size:14px;font-weight:700}
+.abar{display:block;height:6px;background:var(--n1)} .abar b{display:block;height:100%;background:var(--or);width:100%}
+@keyframes blinkbg{50%{background:#d63f5c}}
+
+/* ---- workflows ---- */
+.card.envcard{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.envinfo{display:flex;flex-direction:column;gap:3px;min-width:0}
+.envinfo b{font:10px var(--px);color:var(--l)} .envline{font-size:13px;opacity:.85}
+.wfcard{display:block}
+.wfhead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.wfhead b{flex:1;font:10px/1.4 var(--px);min-width:0}
+.pill{font:8px var(--px);padding:5px 7px;background:var(--n3);color:var(--l);white-space:nowrap}
+.pill.st-ok{background:var(--v);color:var(--n1)} .pill.st-crashed,.pill.st-paused{background:#ff5d7a;color:var(--n1)}
+.slots{display:flex;gap:6px}
+.slot{flex:1;min-width:0;min-height:76px;background:var(--n1);border:2px dashed var(--n3);padding:5px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center}
+.slot.filled{border-style:solid;border-color:var(--v);background:var(--n3)}
+.slot small{font:700 9px var(--tx);opacity:.65;letter-spacing:0;white-space:nowrap}
+.slot b{font-size:10px;line-height:1.2;font-weight:700;overflow-wrap:anywhere}
+.slot b.plus{font:16px var(--px);color:var(--v)}
+.slot em{font-style:normal;font-size:10px;color:var(--m);font-weight:700}
+.wfstats{font-size:13px;margin-top:10px;color:var(--l)} .wfnote{font-size:12px;opacity:.7;margin-top:4px;line-height:1.4}
+.opt-block{display:block;width:100%;text-align:left;background:var(--n3);border:2px solid var(--v);padding:10px;margin-bottom:8px;min-height:56px}
+.opt-block.cur{border-color:var(--or)}
+.opt-block b{display:block;font-size:14px} .opt-block span{font-size:12px;opacity:.8}
+.shoprow{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.shoprow.locked{opacity:.55}
+.sinfo{display:flex;flex-direction:column;gap:3px;min-width:0} .sinfo b{font-size:14px}
+
+/* ---- clients ---- */
+.income{margin:0 0 10px;font:10px var(--px);color:var(--or)}
+.client{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.cinfo{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.cinfo b{font-size:15px}
+.ctasks{display:flex;gap:6px}
+.sat{height:8px!important} .satline{font-size:12px;opacity:.85}
+.client.offer{border-color:var(--v)}
+
+/* ---- equipe ---- */
+.person.locked{opacity:.6} .person.locked .frame img{filter:grayscale(1) brightness(.6)}
+.person .fx{font-size:12px;font-weight:600;color:var(--l);margin-top:2px}
+.person .acts{display:block}
+.person .pt{flex:1}
+
+/* ---- agence & succes ---- */
+.citycard{display:flex;flex-direction:column;gap:4px} .citycard b{font:12px var(--px);color:var(--or)}
+.cityrow{display:flex;justify-content:space-between;align-items:center;min-height:44px}
+.cityrow.cur{border-color:var(--v)} .cityrow.done{opacity:.6} .cityrow b{font:10px var(--px)}
+.ach{display:flex;gap:12px;align-items:center;opacity:.55}
+.ach.got{opacity:1;border-color:var(--v)}
+.medal{flex:none;width:40px;height:40px;display:grid;place-items:center;background:var(--n1);border:2px solid var(--n3);font:9px var(--px);color:var(--n3)}
+.ach.got .medal{border-color:var(--or);color:var(--or)}
+
+/* ---- devis ---- */
+.dl{display:flex;justify-content:space-between;font-size:14px;border-bottom:1px solid #cfc3ee;padding:2px 0}
+.dl i{font-style:normal}
+.g-choice{display:flex;flex-direction:column;gap:14px;flex:1}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:auto}
+.opts .btn{margin:0;font:10px var(--px);min-height:56px}
+.autoline{margin:12px 0 0;font-size:12px;opacity:.75;line-height:1.5}

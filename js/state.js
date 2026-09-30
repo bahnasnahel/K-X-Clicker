@@ -1,53 +1,76 @@
 import { CONFIG } from "./config.js";
 
-function defaults() {
+export function defaults() {
   const now = Date.now();
   return {
     v: CONFIG.save.version,
     money: 0,
-    hoursSaved: 0,        // heures gagnees dans l'agence courante
+    hoursSaved: 0,        // heures gagnees disponibles (se depensent en blocs)
+    hoursRun: 0,          // heures gagnees dans l'agence courante (progression, prestige)
     lifetimeHours: 0,     // toutes agences confondues
     stress: 0,
     heat: 0,
     city: 0,
     reputation: 0,
+    bonusMult: 0,         // bonus permanent des succes
     queue: [],
     nextTaskId: 1,
-    unlocked: { facture: true, relance: true, excel: false, rapport: false },
+    nextClientId: 1,
+    unlocked: { facture: true, relance: true, excel: false, rapport: false, devis: false, contrat: false },
+    offers: [],
     clients: [],
-    workflows: [],
-    team: { nahel: true, yanis: false, noah: false, jadd: false },
-    upgrades: {},
+    workflows: {},        // par type de tache
+    blocks: {},           // id de bloc -> niveau
+    servers: 0,
+    attack: null,
+    team: {
+      nahel: { on: true,  lvl: 0 },
+      yanis: { on: false, lvl: 0 },
+      jadd:  { on: false, lvl: 0 },
+      noah:  { on: false, lvl: 0 },
+    },
     achievements: {},
-    stats: { tasksDone: 0, playSeconds: 0 },
+    stats: {
+      tasksDone: 0, autoDone: 0, playSeconds: 0, bugs: 0, cleanSince: null,
+      attacksRepelled: 0, windowsOpened: 0, clientsSigned: 0, clientsSatisfied: 0,
+      moneyEarned: 0,
+    },
     settings: { muted: false, tutorialDone: false },
-    meta: { created: now, lastSave: now },
+    meta: { created: now, lastSave: now, lastActive: now },
   };
 }
 
 export const state = defaults();
 
+// Recopie les valeurs sauvegardees. Un objet vide dans les valeurs par defaut
+// (workflows, blocks, achievements) est recopie en entier, les autres cle par cle.
 function assign(target, src) {
   for (const k of Object.keys(target)) {
     if (!(k in src)) continue;
     const t = target[k], s = src[k];
-    if (t && typeof t === "object" && !Array.isArray(t) && s && typeof s === "object") assign(t, s);
+    const plain = t && typeof t === "object" && !Array.isArray(t);
+    if (plain && Object.keys(t).length > 0 && s && typeof s === "object") assign(t, s);
     else target[k] = s;
   }
+}
+
+export function normalize() {
+  state.blocks.t_mail ||= 1;
+  state.blocks.a_basic ||= 1;
 }
 
 export function load() {
   try {
     const raw = localStorage.getItem(CONFIG.save.key);
-    if (!raw) return false;
-    assign(state, JSON.parse(raw));
-    // les objets a cles libres (upgrades, achievements) sont recopies tels quels
+    if (!raw) { normalize(); return false; }
     const saved = JSON.parse(raw);
-    state.upgrades = saved.upgrades || {};
-    state.achievements = saved.achievements || {};
+    if (saved.v !== CONFIG.save.version) { normalize(); return false; }
+    assign(state, saved);
+    normalize();
     return true;
   } catch (e) {
     console.warn("Sauvegarde illisible", e);
+    normalize();
     return false;
   }
 }
@@ -62,12 +85,13 @@ export function save() {
 }
 
 export function reset() {
-  const keep = { ...state.settings };
+  const muted = state.settings.muted;
   try { localStorage.removeItem(CONFIG.save.key); } catch (e) {}
   const fresh = defaults();
   for (const k of Object.keys(state)) delete state[k];
   Object.assign(state, fresh);
-  state.settings.muted = keep.muted;
+  state.settings.muted = muted;
+  normalize();
   save();
 }
 
@@ -79,9 +103,26 @@ export function startAutosave() {
   window.addEventListener("pagehide", save);
 }
 
-// niveau du bureau selon les heures gagnees
+// ---------- Gains ----------
+export function gainMult() {
+  return 1 + state.reputation * CONFIG.prestige.repBonus + state.bonusMult;
+}
+
+// Ajoute des gains (avec bonus de reputation et de succes). Retourne les gains reels.
+export function earn(euro, hours, extra = 1) {
+  const m = gainMult() * extra;
+  const e = euro * m, h = hours * m;
+  state.money += e;
+  state.hoursSaved += h;
+  state.hoursRun += h;
+  state.lifetimeHours += h;
+  state.stats.moneyEarned += e;
+  return { euro: e, hours: h };
+}
+
+// niveau du bureau (nombre d'ecrans) selon les heures gagnees dans l'agence
 export function deskLevel() {
   let lvl = 0;
-  CONFIG.desk.forEach((d, i) => { if (state.hoursSaved >= d.minHours) lvl = i; });
+  CONFIG.desk.forEach((d, i) => { if (state.hoursRun >= d.minHours) lvl = i; });
   return lvl;
 }
