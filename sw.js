@@ -1,6 +1,6 @@
 // Service worker K'X Clicker : jeu complet hors ligne.
 // A CHAQUE MISE EN LIGNE, incremente VERSION pour forcer la mise a jour.
-const VERSION = "v6-0001";
+const VERSION = "v6-0002";
 const CACHE = "kx-" + VERSION;
 
 const FILES = [
@@ -27,14 +27,16 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// cache d'abord (rapide, hors ligne), mise a jour en arriere-plan
+// reseau d'abord (toujours la derniere version), cache en secours (hors ligne ou reseau lent)
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET" || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
     caches.open(CACHE).then(async (c) => {
-      const hit = await c.match(e.request, { ignoreSearch: true });
-      const net = fetch(e.request).then((r) => { if (r.ok) c.put(e.request, r.clone()); return r; }).catch(() => hit);
-      return hit || net;
+      const cached = await c.match(e.request, { ignoreSearch: true });
+      const net = fetch(e.request, { cache: "no-cache" }).then((r) => { if (r.ok) c.put(e.request, r.clone()); return r; });
+      if (!cached) return net;
+      // reseau lent (plus de 3 s) : on sert le cache
+      return Promise.race([net, new Promise((res) => setTimeout(() => res(cached), 3000))]).catch(() => cached);
     })
   );
 });

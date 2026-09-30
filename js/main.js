@@ -44,7 +44,10 @@ window.addEventListener("pointerdown", unlockAudio, { once: true });
 // PWA : hors ligne + mise a jour automatique
 if ("serviceWorker" in navigator) {
   const hadController = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  navigator.serviceWorker.register("sw.js").then((reg) => {
+    // cherche une nouvelle version au retour dans l'application
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+  }).catch(() => {});
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (hadController) location.reload();
   });
