@@ -6,18 +6,19 @@ import { confirmDialog } from "../modal.js";
 import { portrait, activePerson } from "../bubbles.js";
 import { avatar } from "../avatar.js";
 import { recruit, upgrade, upgradeCost, isVisible, jaddTap, goodChance, noahDefense, blockChance, attackPower } from "../crew.js";
-import { staffList, nahelStat, candidates, hire, fire, maxStaff, officeMax, nextOffice, officeCost, upgradeOffice } from "../staff.js";
+import { staffList, directorStat, candidates, hire, fire, maxStaff, officeMax, nextOffice, officeCost, upgradeOffice } from "../staff.js";
 import { recruitAdCost, canRecruitAd, launchRecruitAd, adRunning, adLeft, dismissCandidate, maxTier } from "../ads.js";
 
 const T = CONFIG.team;
 const pct = (v) => Math.round(v * 100);
 const effect = (id) => {
   const m = state.team[id];
-  if (id === "nahel") { const n = nahelStat(); return `Niveau ${m.lvl} · gains d'argent x${nahelMult().toFixed(2).replace(".", ",")} · ${n.time} h de travail · compétence ${n.skill}`; }
+  const n = directorStat(id), work = `${n.time} h de travail · compétence ${n.skill}`;
+  if (id === "nahel") return `Niveau ${m.lvl} · gains d'argent x${nahelMult().toFixed(2).replace(".", ",")} · ${work}`;
   if (!m.on) return "";
-  if (id === "yanis") return `Niveau ${m.lvl} · automatisation +${pct(m.lvl * T.yanis.speedBonus)} % · heures x${yanisHoursMult().toString().replace(".", ",")}`;
-  if (id === "jadd") return `Niveau ${m.lvl} · ${pct(goodChance())} % d'événements positifs`;
-  if (id === "noah") return `Niveau ${m.lvl} · défense ${noahDefense().toFixed(1).replace(".", ",")} · bloque ${pct(blockChance())} % des attaques actuelles (puissance ${attackPower()})`;
+  if (id === "yanis") return `Niveau ${m.lvl} · automatisation +${pct(m.lvl * T.yanis.speedBonus)} % · heures x${yanisHoursMult().toString().replace(".", ",")} · ${work}`;
+  if (id === "jadd") return `Niveau ${m.lvl} · ${pct(goodChance())} % d'événements positifs · ${work}`;
+  if (id === "noah") return `Niveau ${m.lvl} · défense ${noahDefense().toFixed(1).replace(".", ",")} · bloque ${pct(blockChance())} % des attaques actuelles (puissance ${attackPower()}) · ${work}`;
 };
 const nextBonus = (id) => {           // prochain gros palier
   const every = id === "nahel" ? T.nahel.bigBoostEvery : id === "yanis" ? T.yanis.hoursEvery : 0;
@@ -69,7 +70,7 @@ export default {
       // employes
       r.append(el("div", "qhead", `<h2 class="h">Employés</h2><span class="qcount">${state.staff.length} / ${maxStaff()}</span>`));
       r.append(el("p", "muted small", "Chaque employé apporte du temps et un niveau de compétence pour servir tes clients. Il coûte un salaire en continu."));
-      const hired = staffList().filter((p) => !p.isNahel);
+      const hired = staffList().filter((p) => !p.isDirector);
       if (!hired.length) r.append(el("p", "muted", "Personne pour l'instant : tu travailles seul."));
       for (const p of hired) {
         const cl = state.clients.find((c) => c.id === state.assign[p.id]);

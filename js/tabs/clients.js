@@ -23,7 +23,7 @@ function assignDialog(c) {
       const cur = state.assign[p.id], here = cur === c.id;
       const other = cur && !here ? state.clients.find((x) => x.id === cur) : null;
       const b = el("button", "opt-block" + (here ? " cur" : ""),
-        `<span class="optrow">${avatar(p, "", p.isNahel ? null : "e:" + p.id)}<span><b>${p.name || p.title}</b><span>${p.title} · ${p.time} h · niveau ${p.skill}${other ? " · chez " + other.name : here ? " · affecté ici" : ""}</span></span></span>`);
+        `<span class="optrow">${avatar(p, "", p.isDirector ? null : "e:" + p.id)}<span><b>${p.name || p.title}</b><span>${p.title} · ${p.time} h · niveau ${p.skill}${other ? " · chez " + other.name : here ? " · affecté ici" : ""}</span></span></span>`);
       b.onclick = () => { assign(p.id, c.id); sfx.ok(); close(); };
       box.append(b);
     }

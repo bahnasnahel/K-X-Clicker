@@ -18,7 +18,7 @@ export function photoFor(key) {
 
 // key : "e:<id>" pour un employe, "c:<id>" pour un client
 export function avatar(p, cls = "", key = null) {
-  if (p && p.isNahel) return portrait("nahel", cls);
+  if (p && p.isDirector) return portrait(p.id, cls);
   const file = key ? photoFor(key) : null;
   return file ? frame(file, cls) : "";
 }

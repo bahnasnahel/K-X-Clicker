@@ -104,8 +104,13 @@ export const CONFIG = {
   },
 
   // --- Personnel ---
+  // Tous les dirigeants peuvent etre envoyes chez un client : temps = baseTime + niveau x timePerLevel,
+  // competence = skillBase + 1 tous les skillEvery niveaux. Un dirigeant n'est disponible qu'une fois recrute.
   staff: {
-    nahel: { baseTime: 8, timePerLevel: 1, skillEvery: 3 },   // Nahel travaille aussi : temps et competence
+    nahel: { baseTime: 8, timePerLevel: 1, skillBase: 1, skillEvery: 3 },
+    yanis: { baseTime: 8, timePerLevel: 1, skillBase: 3, skillEvery: 3 },
+    jadd:  { baseTime: 6, timePerLevel: 1, skillBase: 2, skillEvery: 3 },
+    noah:  { baseTime: 6, timePerLevel: 1, skillBase: 3, skillEvery: 3 },
   },
 
   // --- Publicite : pour trouver des clients et des employes ---
@@ -120,7 +125,7 @@ export const CONFIG = {
       firstFree: true,          // la toute premiere campagne est offerte
     },
     recruit: {
-      cost: 130, cityBonus: 0.6,
+      cost: 70, cityBonus: 0.6,
       durationSec: 20,
       candidates: [3, 5],       // profils proposes (+1 si credibilite >= 60)
       bonusCred: 60,
@@ -178,13 +183,13 @@ export const CONFIG = {
   // Dans un meme palier, chaque client a un "profil" (spread) : certains demandent plus et rapportent plus.
   // minMoney : argent gagne dans l'agence ; minCred : credibilite minimale pour qu'ils se presentent.
   sizes: {
-    artisan: { label: "Artisan",      pay: 0.3, taskEverySec: 14, time: 6,   skill: [1, 1],  minMoney: 0,     minCred: 0,  weight: 1 },
-    tpe:     { label: "TPE",          pay: 1.4, taskEverySec: 8,  time: 16,  skill: [2, 3],  minMoney: 500,   minCred: 25, weight: 0.9 },
-    pme:     { label: "PME",          pay: 6,   taskEverySec: 5,  time: 38,  skill: [4, 5],  minMoney: 3000,  minCred: 45, weight: 0.6 },
-    eti:     { label: "ETI",          pay: 26,  taskEverySec: 3,  time: 80,  skill: [6, 7],  minMoney: 15000, minCred: 65, weight: 0.35 },
-    groupe:  { label: "Grand groupe", pay: 110, taskEverySec: 2,  time: 160, skill: [8, 10], minMoney: 60000, minCred: 80, weight: 0.2 },
+    artisan: { label: "Artisan",      pay: 0.3, taskEverySec: 14, timeRange: [4, 12],    skill: [1, 1],  minMoney: 0,     minCred: 0,  weight: 1 },
+    tpe:     { label: "TPE",          pay: 1.4, taskEverySec: 8,  timeRange: [9, 30],    skill: [2, 3],  minMoney: 500,   minCred: 25, weight: 0.9 },
+    pme:     { label: "PME",          pay: 6,   taskEverySec: 5,  timeRange: [20, 70],   skill: [4, 5],  minMoney: 3000,  minCred: 45, weight: 0.6 },
+    eti:     { label: "ETI",          pay: 26,  taskEverySec: 3,  timeRange: [45, 140],  skill: [6, 7],  minMoney: 15000, minCred: 65, weight: 0.35 },
+    groupe:  { label: "Grand groupe", pay: 110, taskEverySec: 2,  timeRange: [90, 280],  skill: [8, 10], minMoney: 60000, minCred: 80, weight: 0.2 },
   },
-  profileSpread: [0.65, 1.6],   // multiplicateur de profil : temps x m, paiement x m^1.4, competence +/- 1 aux extremes
+  profileSpread: [0.65, 1.6],   // multiplicateur de profil : paiement x m^1.4, competence +/- 1 aux extremes. Le temps demande suit la meme position dans timeRange.
   higherTierDamp: 0.6,          // chaque palier plus haut deja disponible reduit la part des clients de rang inferieur
   cityNeedBonus: { time: 0.1, skill: 0 },    // par ville : +10 % de temps demande
 

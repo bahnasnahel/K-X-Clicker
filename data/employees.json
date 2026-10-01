@@ -9,7 +9,7 @@
       "tier": 1,
       "time": 4,
       "skill": 1,
-      "hire": 45,
+      "hire": 15,
       "salary": 0.02,
       "minRunMoney": 0,
       "minCity": 0
@@ -22,7 +22,7 @@
       "tier": 1,
       "time": 4,
       "skill": 1,
-      "hire": 45,
+      "hire": 15,
       "salary": 0.02,
       "minRunMoney": 0,
       "minCity": 0
@@ -35,7 +35,7 @@
       "tier": 1,
       "time": 6,
       "skill": 1,
-      "hire": 120,
+      "hire": 40,
       "salary": 0.06,
       "minRunMoney": 150,
       "minCity": 0
@@ -48,7 +48,7 @@
       "tier": 2,
       "time": 7,
       "skill": 2,
-      "hire": 240,
+      "hire": 85,
       "salary": 0.1,
       "minRunMoney": 300,
       "minCity": 0
@@ -61,7 +61,7 @@
       "tier": 2,
       "time": 9,
       "skill": 2,
-      "hire": 420,
+      "hire": 145,
       "salary": 0.16,
       "minRunMoney": 500,
       "minCity": 0
@@ -74,7 +74,7 @@
       "tier": 2,
       "time": 10,
       "skill": 3,
-      "hire": 750,
+      "hire": 260,
       "salary": 0.28,
       "minRunMoney": 900,
       "minCity": 0
@@ -87,7 +87,7 @@
       "tier": 3,
       "time": 10,
       "skill": 4,
-      "hire": 1200,
+      "hire": 420,
       "salary": 0.44,
       "minRunMoney": 1400,
       "minCity": 0
@@ -100,7 +100,7 @@
       "tier": 3,
       "time": 12,
       "skill": 5,
-      "hire": 2100,
+      "hire": 735,
       "salary": 0.8,
       "minRunMoney": 2200,
       "minCity": 0
@@ -113,7 +113,7 @@
       "tier": 4,
       "time": 14,
       "skill": 6,
-      "hire": 3600,
+      "hire": 1260,
       "salary": 1.3,
       "minRunMoney": 3500,
       "minCity": 1
@@ -126,7 +126,7 @@
       "tier": 4,
       "time": 14,
       "skill": 7,
-      "hire": 6000,
+      "hire": 2100,
       "salary": 2.0,
       "minRunMoney": 6000,
       "minCity": 1
@@ -139,7 +139,7 @@
       "tier": 4,
       "time": 16,
       "skill": 8,
-      "hire": 11250,
+      "hire": 3935,
       "salary": 3.2,
       "minRunMoney": 10000,
       "minCity": 1
@@ -152,7 +152,7 @@
       "tier": 5,
       "time": 16,
       "skill": 9,
-      "hire": 19500,
+      "hire": 6825,
       "salary": 4.8,
       "minRunMoney": 16000,
       "minCity": 2
@@ -165,7 +165,7 @@
       "tier": 5,
       "time": 20,
       "skill": 10,
-      "hire": 45000,
+      "hire": 15750,
       "salary": 9.0,
       "minRunMoney": 30000,
       "minCity": 2
@@ -178,7 +178,7 @@
       "tier": 2,
       "time": 10,
       "skill": 3,
-      "hire": 600,
+      "hire": 210,
       "salary": 0.2,
       "minRunMoney": 0,
       "minCity": 0
@@ -191,7 +191,7 @@
       "tier": 2,
       "time": 12,
       "skill": 3,
-      "hire": 750,
+      "hire": 260,
       "salary": 0.26,
       "minRunMoney": 0,
       "minCity": 0
@@ -204,7 +204,7 @@
       "tier": 3,
       "time": 14,
       "skill": 5,
-      "hire": 2200,
+      "hire": 770,
       "salary": 0.9,
       "minRunMoney": 0,
       "minCity": 0
@@ -217,7 +217,7 @@
       "tier": 4,
       "time": 18,
       "skill": 7,
-      "hire": 8000,
+      "hire": 2800,
       "salary": 2.6,
       "minRunMoney": 0,
       "minCity": 1
@@ -230,7 +230,7 @@
       "tier": 5,
       "time": 24,
       "skill": 9,
-      "hire": 40000,
+      "hire": 14000,
       "salary": 9,
       "minRunMoney": 0,
       "minCity": 2
@@ -243,7 +243,7 @@
       "tier": 5,
       "time": 28,
       "skill": 10,
-      "hire": 65000,
+      "hire": 22750,
       "salary": 14,
       "minRunMoney": 0,
       "minCity": 2

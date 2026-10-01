@@ -46,14 +46,17 @@ export function makeOffer() {
   for (const [k, w] of weights) { if ((r -= w) < 0) { size = k; break; } }
   const sz = CONFIG.sizes[size], N = CONFIG.cityNeedBonus;
 
-  // profil dans le palier : certains demandent plus et rapportent plus
+  // profil dans le palier : u (0 a 1) place le client dans la plage de temps demande du palier ;
+  // plus il demande, plus il rapporte (et plus il est exigeant en competence)
   const [lo, hi] = CONFIG.profileSpread;
-  let m = lo + Math.random() * (hi - lo);
-  if (state.stats.clientsSigned === 0) m = Math.min(m, 1);    // le tout premier client est facile a servir
+  let u = Math.random();
+  if (state.stats.clientsSigned === 0) u = Math.min(u, 0.5);     // le tout premier client est facile a servir
+  const m = lo + u * (hi - lo);
   let skill = sz.skill[0] + Math.floor(Math.random() * (sz.skill[1] - sz.skill[0] + 1));
   if (m > 1.3) skill += 1; else if (m < 0.8) skill -= 1;
   skill = Math.max(1, Math.min(10, skill + state.city * N.skill));
-  const time = Math.max(2, Math.round(sz.time * m * (1 + state.city * N.time)));
+  const [t0, t1] = sz.timeRange;
+  const time = Math.max(2, Math.round((t0 + u * (t1 - t0)) * (1 + state.city * N.time)));
   const pay = +(sz.pay * Math.pow(m, 1.4) * (1 + 0.5 * state.city)).toFixed(2);
   return { id: state.nextClientId++, sector: sid, name, size, pay, every: sz.taskEverySec, types: sec.tasks, need: { time, skill }, profile: +m.toFixed(2) };
 }
