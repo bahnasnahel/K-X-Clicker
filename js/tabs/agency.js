@@ -3,7 +3,7 @@ import { CONFIG } from "../config.js";
 import { state } from "../state.js";
 import { sfx } from "../audio.js";
 import { confirmDialog } from "../modal.js";
-import { cityName, owned, price, canBuy, buyAgency, switchAgency, pointsGain, rebirth, passiveRates } from "../agencies.js";
+import { cityName, owned, price, canBuy, buyAgency, switchAgency, pointsGain, rebirth, totalMoney } from "../agencies.js";
 import * as shop from "../shop.js";
 
 const P = CONFIG.prestige;
@@ -21,20 +21,21 @@ export default {
 
       // compteur total d'heures gagnees (toutes agences confondues)
       const tot = el("div", "card totalcard");
-      tot.innerHTML = `<span class="kind">Heures gagnées au total</span><b class="totval"></b><span class="sdesc totsub"></span>`;
-      const tv = tot.querySelector(".totval"), ts = tot.querySelector(".totsub");
+      tot.innerHTML = `<span class="kind">Heures gagnées au total</span><b class="totval"></b><span class="sdesc totsub"></span><span class="kind">Argent de toutes tes agences (pour acheter une agence)</span><b class="totval totmoney"></b>`;
+      const tv = tot.querySelector(".totval"), ts = tot.querySelector(".totsub"), tm = tot.querySelector(".totmoney");
       live(() => {
         setText(tv, `${fmt(state.lifetimeHours)} h`);
         setText(ts, `dont ${fmt(state.hoursRun)} h dans l'agence que tu diriges`);
+        setText(tm, `${fmt(totalMoney())} EUR`);
       });
       r.append(tot);
 
       // explication
       const how = el("div", "card howcard");
       how.innerHTML = `<div class="credhead"><b>Comment ça marche ?</b></div>
-        <p><b>Les agences.</b> Chaque ville est une agence avec ses propres clients, employés, bureau, automatisations et direction. Elles <b>tournent en parallèle</b> : une agence que tu ne diriges pas continue de produire de l'argent et des heures, à ${Math.round(P.passiveFactor * 100)} % de son rythme. L'argent est commun à toute l'entreprise.</p>
-        <p><b>Débloquer une agence.</b> Il faut la payer en euros, très cher : c'est ce qui te pousse à progresser. Les agences s'ouvrent dans l'ordre.</p>
-        <p><b>Remettre à zéro.</b> Tu peux remettre à zéro l'agence que tu diriges (clients, employés, bureau, automatisations, direction, crédibilité). En échange tu gagnes des <b>points</b>, selon les heures gagnées dans cette agence. Ton argent, tes succès et tes autres agences ne bougent pas.</p>
+        <p><b>Les agences.</b> Chaque ville est une agence avec ses propres clients, employés, bureau, automatisations et direction. Elles <b>tournent en parallèle</b> : une agence que tu ne diriges pas continue de produire de l'argent et des heures, à ${Math.round(P.passiveFactor * 100)} % de son rythme (abonnements, automatisations et une estimation des tâches à la main). <b>L'argent est propre à chaque agence</b> : il n'est commun que pour acheter une nouvelle agence.</p>
+        <p><b>Débloquer une agence.</b> Il faut la payer en euros, très cher : c'est ce qui te pousse à progresser. Pour cet achat, l'argent de toutes tes agences compte. Les agences s'ouvrent dans l'ordre.</p>
+        <p><b>Remettre à zéro.</b> Tu peux remettre à zéro l'agence que tu diriges (clients, employés, bureau, automatisations, direction, crédibilité). En échange tu gagnes des <b>points</b>, selon les heures gagnées dans cette agence. L'argent de cette agence est remis à zéro aussi (pense à acheter tes agences avant). Tes succès, ta boutique et tes autres agences ne bougent pas.</p>
         <p><b>La boutique permanente.</b> Les points s'y dépensent pour des bonus qui restent pour toujours, dans toutes les agences : départs plus forts, réductions, bonus de gains et déblocages plus tôt.</p>`;
       r.append(how);
 
@@ -48,11 +49,11 @@ export default {
         const kind = info.querySelector(".kind"), desc = info.querySelector(".sdesc");
         card.append(info);
         if (isCur) {
-          live(() => { setText(kind, "Agence que tu diriges"); setText(desc, `${fmt(state.hoursRun)} h gagnées · ${state.clients.length} client${state.clients.length > 1 ? "s" : ""} · ${state.staff.length} employé${state.staff.length > 1 ? "s" : ""}`); });
+          live(() => { setText(kind, "Agence que tu diriges"); setText(desc, `${fmt(state.money)} EUR en caisse · ${fmt(state.hoursRun)} h gagnées · ${state.clients.length} client${state.clients.length > 1 ? "s" : ""} · ${state.staff.length} employé${state.staff.length > 1 ? "s" : ""}`); });
         } else if (c.unlocked && c.data) {
           const d = c.data, pr = c.passive;
           setText(kind, "Tourne en ton absence");
-          live(() => setText(desc, `${fmt(d.hoursRun)} h gagnées · ${d.clients.length} client${d.clients.length > 1 ? "s" : ""} · +${fmt2(pr.euro * P.passiveFactor)} EUR/s, +${fmt1(pr.hours * P.passiveFactor * 60)} h/min`));
+          live(() => setText(desc, `${fmt(d.money)} EUR en caisse · ${fmt(d.hoursRun)} h gagnées · ${d.clients.length} client${d.clients.length > 1 ? "s" : ""} · +${fmt2(pr.euro * P.passiveFactor)} EUR/s (dont ${fmt2((pr.manual || 0) * P.passiveFactor)} estimés des tâches à la main), +${fmt1(pr.hours * P.passiveFactor * 60)} h/min`));
           const go = el("button", "btn small-btn", "Diriger");
           go.onclick = () => switchAgency(i);
           card.append(go);
@@ -62,7 +63,7 @@ export default {
           setText(desc, (prevOk ? "" : `Débloque d'abord K'X ${P.cities[i - 1]}. `) + P.news[i]);
           const b = el("button", "btn small-btn", `Débloquer<br><small>${fmt(price(i))} EUR</small>`);
           b.disabled = !canBuy(i);
-          b.onclick = async () => { if (await confirmDialog(`Débloquer K'X ${name} ?`, `Cela coûte ${fmt(price(i))} EUR, pris sur l'argent de l'entreprise. L'agence démarre de zéro et tu pourras la diriger quand tu veux.`, "Débloquer")) buyAgency(i); };
+          b.onclick = async () => { if (await confirmDialog(`Débloquer K'X ${name} ?`, `Cela coûte ${fmt(price(i))} EUR, pris sur l'argent de toutes tes agences (d'abord celle-ci). L'agence démarre de zéro et tu pourras la diriger quand tu veux.`, "Débloquer")) buyAgency(i); };
           card.append(b);
         }
         r.append(card);
@@ -74,11 +75,11 @@ export default {
       const g = pointsGain();
       rb.innerHTML = `<div class="cinfo"><b>K'X ${cityName()}</b>
         <span class="sdesc">Tu as gagné <b>${fmt(state.hoursRun)} h</b> dans cette agence. Si tu la remets à zéro maintenant, tu gagnes <b>${g} point${g > 1 ? "s" : ""}</b>.</span>
-        <span class="sdesc">Tu perds : clients, employés, bureau, automatisations, direction et crédibilité de cette agence. Tu gardes : l'argent, les succès, la boutique et tes autres agences.</span></div>`;
+        <span class="sdesc">Tu perds : argent, clients, employés, bureau, automatisations, direction et crédibilité de cette agence. Tu gardes : les succès, la boutique et tes autres agences.</span></div>`;
       const rbtn = el("button", "btn small-btn", `Remettre à zéro<br><small>+${g} point${g > 1 ? "s" : ""}</small>`);
       rbtn.disabled = g < 1;
       rbtn.onclick = async () => {
-        if (await confirmDialog("Remettre cette agence à zéro ?", `Tu gagnes +${g} point${g > 1 ? "s" : ""} pour la boutique permanente. K'X ${cityName()} repart de zéro (clients, employés, bureau, automatisations, direction), avec les départs de ta boutique.`, "Remettre à zéro")) rebirth();
+        if (await confirmDialog("Remettre cette agence à zéro ?", `Tu gagnes +${g} point${g > 1 ? "s" : ""} pour la boutique permanente. K'X ${cityName()} repart de zéro (argent, clients, employés, bureau, automatisations, direction), avec les départs de ta boutique. Si tu comptais acheter une agence, fais-le avant.`, "Remettre à zéro")) rebirth();
       };
       rb.append(rbtn);
       r.append(rb);

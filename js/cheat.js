@@ -32,7 +32,7 @@ function segment(title, values, key, prefix, onPick) {
 const ACTIONS = [
   ["+1 000 EUR", () => { state.money += 1000; }],
   ["+100 heures", () => { state.hoursSaved += 100; state.hoursRun += 100; state.lifetimeHours += 100; }],
-  ["+1 million EUR", () => { state.money += 1000000; }],
+  ["+1 million EUR (agence active)", () => { state.money += 1000000; }],
   ["+500 heures dans cette agence", () => { state.hoursSaved += 500; state.hoursRun += 500; state.lifetimeHours += 500; }],
   ["Débloquer toutes les agences", () => { for (const c of state.cities) if (!c.unlocked) { c.unlocked = true; } state.cities.forEach((c, i) => { if (!c.data && i !== state.city) c.data = freshAgencyFields(i); }); }],
   ["+50 points de boutique", () => { state.points += 50; state.pointsEarned += 50; }],

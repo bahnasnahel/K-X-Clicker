@@ -21,15 +21,16 @@ export function checkOffline() {
   state.meta.lastActive = Date.now();
   if (away < O.minAwaySeconds) return;
   const counted = Math.min(away, O.capHours * 3600);
-  let euro = Math.max(0, incomePerSec() * O.rate - payroll()) * counted;   // abonnements a 50 %, moins les salaires
+  const mine = Math.max(0, incomePerSec() * O.rate - payroll()) * counted;   // abonnements a 50 %, moins les salaires
+  let euro = mine;
   for (let i = 0; i < state.cities.length; i++) {                         // agences que tu ne diriges pas
     const c = state.cities[i];
     if (i === state.city || !c.data) continue;
     const e = c.passive.euro * O.rate * counted, h = c.passive.hours * O.rate * counted;
-    euro += e; c.data.runMoney += e; c.data.hoursSaved += h; c.data.hoursRun += h; state.lifetimeHours += h;
+    euro += e; c.data.money += e; c.data.runMoney += e; c.data.hoursSaved += h; c.data.hoursRun += h; state.lifetimeHours += h;
   }
   if (euro <= 0) return;
-  state.money += euro;
+  state.money += mine;                                                    // les autres agences ont deja recu leur part dans leur caisse
   state.stats.moneyEarned += euro;
   save();
   sfx.coin();

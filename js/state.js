@@ -1,8 +1,9 @@
 import { CONFIG } from "./config.js";
 
 // Champs propres a UNE agence : ils sont rangés dans state.cities[i].data quand tu diriges une autre agence.
-// Tout le reste (argent, points, boutique, succes, statistiques, explications) est commun a l'entreprise.
-export const AGENCY_FIELDS = ["hoursSaved", "hoursRun", "runMoney", "stress", "credibility", "queue", "offers", "clients", "auto",
+// Tout le reste (points, boutique, succes, statistiques, explications) est commun a l'entreprise.
+// L'argent est propre a chaque agence ; il n'est commun que pour ACHETER une nouvelle agence.
+export const AGENCY_FIELDS = ["money", "hoursSaved", "hoursRun", "runMoney", "stress", "credibility", "queue", "offers", "clients", "auto",
   "staff", "assign", "autoAssign", "office", "ads", "candidates", "people", "photos", "attack", "team", "freeAds"];
 
 const shopLvl = (st, id) => (st.shop && st.shop[id]) || 0;
@@ -15,6 +16,7 @@ export function freshAgencyFields(city, st = state) {
   types.slice(0, lvl("startAuto")).forEach((t) => { auto[t] = { level: 1, verify: true, backlog: [], progress: 0, pausedUntil: 0, crashedUntil: 0, upgrading: null }; });
   const dir = lvl("startDir");
   return {
+    money: CONFIG.shop.items.find((i) => i.id === "startMoney").per * lvl("startMoney"),   // argent de cette agence (depart de la boutique)
     hoursSaved: 0,        // heures gagnees disponibles : viennent UNIQUEMENT de l'automatisation
     hoursRun: 0,          // heures gagnees dans cette agence (difficulte, points de remise a zero)
     runMoney: 0,          // argent gagne dans cette agence (deblocage des rangs de clients)
@@ -47,7 +49,6 @@ export function defaults() {
   const now = Date.now();
   return {
     v: CONFIG.save.version,
-    money: 0,             // argent COMMUN a toutes les agences
     lifetimeHours: 0,     // heures gagnees, toutes agences et toutes remises a zero confondues
     points: 0,            // points de la boutique permanente (disponibles)
     pointsEarned: 0,      // points gagnes au total
