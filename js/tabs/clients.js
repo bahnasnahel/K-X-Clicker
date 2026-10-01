@@ -104,7 +104,7 @@ export default {
 
       r.append(el("p", "qlabel", "Demandes de clients"));
       if (!state.offers.length) r.append(el("p", "muted", "Aucune demande pour le moment. Lance une campagne de publicité."));
-      for (const o of state.offers) {
+      for (const o of [...state.offers].sort((a, b) => b.pay - a.pay)) {          // du plus rentable au moins rentable
         const sec = CONFIG.sectors[o.sector], sv = previewService(o);
         const c = el("div", "card client offer");
         c.insertAdjacentHTML("beforeend", avatar({}, "", "c:" + o.id));
@@ -121,7 +121,7 @@ export default {
 
       r.append(el("p", "qlabel", "Clients signés"));
       if (!state.clients.length) r.append(el("p", "muted", "Signe ton premier client pour des revenus passifs."));
-      for (const cl of state.clients) {
+      for (const cl of [...state.clients].sort((a, b) => b.pay - a.pay)) {         // du plus rentable au moins rentable
         const sec = CONFIG.sectors[cl.sector];
         const who = assignedTo(cl.id);
         const c = el("div", "card client");

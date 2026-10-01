@@ -1,4 +1,4 @@
-import { el, liveView, setText } from "../util.js";
+import { el, fmt, liveView, setText } from "../util.js";
 import { CONFIG } from "../config.js";
 import { state, gainMult } from "../state.js";
 import { confirmDialog } from "../modal.js";
@@ -13,6 +13,16 @@ export default {
     this.view = liveView(root, () => JSON.stringify([state.city, canOpen(), state.reputation, repGain()]), (r, live) => {
       r.append(el("h2", "h", "Agence"));
       r.append(el("div", "card citycard", `<b>K'X ${cityName()}</b><span class="kind">Réputation ${state.reputation} · gains +${Math.round((gainMult() - 1) * 100)} %</span>`));
+
+      // compteur total d'heures gagnees (toutes agences confondues)
+      const tot = el("div", "card totalcard");
+      tot.innerHTML = `<span class="kind">Heures gagnées au total</span><b class="totval"></b><span class="sdesc totsub"></span>`;
+      const tv = tot.querySelector(".totval"), ts = tot.querySelector(".totsub");
+      live(() => {
+        setText(tv, `${fmt(state.lifetimeHours)} h`);
+        setText(ts, `dont ${fmt(state.hoursRun)} h dans l'agence actuelle`);
+      });
+      r.append(tot);
 
       const prog = el("div", "card");
       prog.innerHTML = `<div class="cinfo"><b>Prochaine étape : ${isLastCity() ? "réouvrir à " + cityName() : "K'X " + cityName(nextCity())}</b>
@@ -30,8 +40,8 @@ export default {
       const how = el("div", "card howcard");
       how.innerHTML = `<div class="credhead"><b>Comment ça marche ?</b></div>
         <p><b>1. Le but.</b> Les heures gagnées (qui viennent de tes automatisations) mesurent la progression de ton agence. Quand la barre ci-dessus est pleine, tu peux ouvrir K'X ${isLastCity() ? "à nouveau à " + cityName() : "dans la ville suivante : " + cityName(nextCity())}.</p>
-        <p><b>2. Ce que tu perds.</b> Tu repars de zéro : argent, clients, employés, bureau, automatisations, stress, crédibilité.</p>
-        <p><b>3. Ce que tu gardes.</b> Nahel, Yanis, Jadd et Noah avec leurs niveaux, tes succès, les explications déjà débloquées et ta <b>réputation</b>.</p>
+        <p><b>2. Ce que tu perds.</b> Tu repars de zéro : argent, clients, employés, bureau, automatisations, stress, crédibilité, et aussi la <b>direction</b> (Nahel, Yanis, Jadd et Noah reviennent au niveau 0, à recruter de nouveau).</p>
+        <p><b>3. Ce que tu gardes.</b> Tes succès, les explications déjà débloquées et ta <b>réputation</b>.</p>
         <p><b>4. La réputation, c'est quoi ?</b> Ce sont des points permanents. Tu en gagnes en ouvrant une agence : <b>heures gagnées ÷ ${P.repPerHours}</b>, au minimum 1. Aujourd'hui : <b>+${gain} point${gain > 1 ? "s" : ""}</b>.</p>
         <p><b>5. Ce qu'elle donne.</b> Chaque point = <b>+${Math.round(P.repBonus * 100)} % de gains</b> sur tout (tâches, abonnements, automatisations), des demandes de clients plus fréquentes et des clients plus gros. Ton bonus passerait de <b>+${bonusNow} %</b> à <b>+${bonusAfter} %</b>.</p>
         <p><b>6. Nouvelle ville.</b> De nouveaux types de tâches et de secteurs arrivent, mais les tâches sont plus difficiles dès le départ. ${isLastCity() ? "Paris est la dernière ville de cette version : tu peux la rouvrir pour gagner encore de la réputation." : P.news[nextCity()]}</p>`;
@@ -40,7 +50,7 @@ export default {
       const b = el("button", "btn big", isLastCity() ? "Rouvrir l'agence" : `Ouvrir K'X ${cityName(nextCity())}`);
       b.disabled = !canOpen();
       b.onclick = async () => {
-        const ok = await confirmDialog("Ouvrir une nouvelle agence ?", `Tu perds : argent, clients, employés, bureau et automatisations. Tu gardes : la direction, les succès et la réputation. Tu gagnes +${repGain()} point${repGain() > 1 ? "s" : ""} de réputation, soit +${Math.round(repGain() * P.repBonus * 100)} % de gains en plus.`, "Ouvrir");
+        const ok = await confirmDialog("Ouvrir une nouvelle agence ?", `Tu perds : argent, clients, employés, bureau, automatisations et la direction (niveaux et recrutements). Tu gardes : les succès et la réputation. Tu gagnes +${repGain()} point${repGain() > 1 ? "s" : ""} de réputation, soit +${Math.round(repGain() * P.repBonus * 100)} % de gains en plus.`, "Ouvrir");
         if (ok) openAgency();
       };
       r.append(b);

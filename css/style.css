@@ -324,3 +324,5 @@ body.notabs #bubbles,body.notabs .alert{bottom:calc(14px + env(safe-area-inset-b
 .person .acts .btn+.btn{margin-top:6px}
 .howcard{display:flex;flex-direction:column;align-items:stretch;gap:8px}
 .howcard p{margin:0;font-size:13px;line-height:1.5}
+.totalcard{display:flex;flex-direction:column;align-items:stretch;gap:4px}
+.totval{font:16px var(--px);color:var(--or)}

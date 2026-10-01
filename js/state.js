@@ -121,7 +121,7 @@ export function nahelMult() {
   const N = CONFIG.team.nahel, l = state.team.nahel.lvl;
   return (1 + N.moneyPerLevel * l) * Math.pow(N.bigBoost, Math.floor(l / N.bigBoostEvery));
 }
-// Yanis : x1,5 sur les heures automatisees tous les 5 niveaux
+// Yanis : x2 sur les heures automatisees tous les 5 niveaux
 export function yanisHoursMult() {
   const Y = CONFIG.team.yanis, y = state.team.yanis;
   return y.on ? Math.pow(Y.hoursBoost, Math.floor(y.lvl / Y.hoursEvery)) : 1;
