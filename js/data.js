@@ -46,12 +46,15 @@ export function rollRarity(minId = null, luck = 0, rnd = Math.random()) {
   return L[from].id;
 }
 const half = (v) => Math.round(v * 2) / 2;                // arrondi a 0,5 pres
-// employe : temps et competence x bonus de la rarete (competence max 10)
+// employe : temps et competence x bonus de la rarete (competence max 10) ; embauche et salaire suivent, moins vite (exposant costExponent)
 export function applyRarity(e, id) {
   const d = rarityDef(id);
   e.rarity = d.id;
   e.time = half(e.time * d.mult);
   e.skill = Math.min(10, half(e.skill * d.mult));
+  const cost = Math.pow(d.mult, CONFIG.rarity.costExponent);
+  e.hire = Math.max(5, Math.round(e.hire * cost));
+  e.salary = +(e.salary * cost).toFixed(3);
   return e;
 }
 const hash01 = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return ((h >>> 0) % 10000) / 10000; };

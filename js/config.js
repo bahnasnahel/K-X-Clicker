@@ -522,6 +522,7 @@ export const CONFIG = {
       { id: "mythique",    label: "Mythique",    chance: 0.4, mult: 10,  color: "#ff9f43" },
       { id: "supreme",     label: "Suprême",     chance: 0.1, mult: 50,  color: "#ff5d7a" },
     ],
+    costExponent: 0.5,          // embauche et salaire d'un employe x (bonus ^ cet exposant) : ils suivent la rarete, mais moins vite que le bonus
     ticketMin: "rare",          // un ticket de recrutement garantit au moins cette rarete
     // Chance : le poids de chaque rarete est multiplie par (1 + chance)^rang (commun = rang 0). Sources : boutique (item "luck"), campagne ciblee.
     targetedLuck: 0.5,          // bonus de chance d'une campagne de recrutement ciblee
