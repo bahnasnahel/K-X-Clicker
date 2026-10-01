@@ -15,13 +15,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 /* ---- entete ---- */
 #top{flex:none;padding-top:env(safe-area-inset-top)}
 .deskwrap{position:relative;border-bottom:3px solid var(--n3)}
-#desk{display:block;width:100%;aspect-ratio:160/72;max-height:24dvh;object-fit:cover;image-rendering:pixelated;background:var(--n2)}
+#desk{display:block;width:100%;aspect-ratio:160/72;max-height:16dvh;transition:max-height .25s ease;object-fit:cover;object-position:center 65%;image-rendering:pixelated;background:var(--n2)}
 .deskbtns{position:absolute;bottom:4px;right:4px;display:flex;gap:4px}
 .iconbtn{width:44px;height:44px;display:grid;place-items:center;background:rgba(9,6,21,.65);border:2px solid var(--v);color:var(--l);padding:0;position:relative}
 .iconbtn:active{background:var(--n3)}
 .iconbtn.off{color:#7a6ba8}
 .iconbtn.off::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:3px;background:var(--m);transform:rotate(-45deg)}
-.deskhint{position:absolute;right:6px;bottom:4px;font:8px var(--px);color:var(--l);opacity:.75;text-shadow:1px 1px 0 var(--n1);pointer-events:none}
+.deskhint{position:absolute;left:6px;bottom:16px;font:8px var(--px);color:var(--l);opacity:.75;text-shadow:1px 1px 0 var(--n1);pointer-events:none}
 .desklabel{position:absolute;left:6px;bottom:4px;font:8px var(--px);color:var(--l);opacity:.75;text-shadow:1px 1px 0 var(--n1)}
 
 .counters{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;background:var(--n2);border-bottom:3px solid var(--n3)}
@@ -243,7 +243,7 @@ h3.h{color:var(--or)}
 .autoline{margin:12px 0 0;font-size:12px;opacity:.75;line-height:1.5}
 
 /* ---- mode triche ---- */
-.cheatbadge{position:absolute;left:6px;top:6px;min-height:28px;padding:4px 8px;background:#ff5d7a;color:var(--n1);border:2px solid var(--n1);font:8px var(--px);z-index:2}
+.cheatbadge{position:absolute;left:50%;transform:translateX(-50%);top:6px;min-height:28px;padding:4px 8px;background:#ff5d7a;color:var(--n1);border:2px solid var(--n1);font:8px var(--px);z-index:2}
 .cheatbadge.hidden{display:none}
 .cheatrow{margin-bottom:6px}
 .seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
@@ -333,3 +333,25 @@ body.notabs #bubbles,body.notabs .alert{bottom:calc(14px + env(safe-area-inset-b
 .agencycard.cur{border-color:var(--v);background:var(--n3)}
 .rebirthcard{display:flex;flex-direction:column;align-items:stretch;gap:10px}
 .rebirthcard .btn{width:100%}
+
+/* ---- petits effets ---- */
+.moneypop{position:fixed;z-index:80;transform:translate(-50%,-50%);font:12px var(--px);color:var(--or);text-shadow:2px 2px 0 var(--n1);pointer-events:none;animation:moneyjump 1.2s ease-out forwards}
+@keyframes moneyjump{0%{opacity:0;transform:translate(-50%,-10%) scale(.7)}15%{opacity:1;transform:translate(-50%,-70%) scale(1.25)}35%{transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-190%) scale(1)}}
+#bpills{position:absolute;left:6px;top:6px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;pointer-events:none;z-index:2}
+.bpill{font:8px var(--px);padding:5px 7px;background:var(--or);color:var(--n1);border:2px solid var(--n1)}
+#top.expanded #desk{max-height:60dvh}
+#desk{cursor:pointer}
+
+/* ---- rarete et album ---- */
+.frame.rar-rare{border-color:#4fa8ff} .frame.rar-epique{border-color:#D36BFF;box-shadow:0 0 0 2px var(--n1),0 0 8px rgba(211,107,255,.7)}
+.frame.rar-legendaire{border-color:#FFD479;box-shadow:0 0 0 2px var(--n1),0 0 10px rgba(255,212,121,.9)}
+.albr.rar-commun{color:#b9a3ee} .albr.rar-rare{color:#4fa8ff} .albr.rar-epique{color:#D36BFF} .albr.rar-legendaire{color:#FFD479}
+.album{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.albcell{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;background:var(--n2);border:2px solid var(--n3);text-align:center;min-height:44px}
+.albcell .frame{width:48px;height:48px}
+.albn{font-size:11px;font-weight:600;line-height:1.2;overflow-wrap:anywhere} .albr{font:7px var(--px)}
+.albcell.sil{opacity:.55} .frame.sil{display:grid;place-items:center;background:var(--n1);border-color:var(--n3)} .frame.sil b{font:16px var(--px);color:var(--n3)}
+.streakhint{bottom:28px}
+#thanks{position:fixed;left:0;right:0;bottom:calc(150px + env(safe-area-inset-bottom));display:flex;justify-content:center;z-index:41;pointer-events:none;padding:0 12px}
+.bubble.thanks{border-color:var(--or);color:var(--l);text-align:left;font-family:var(--tx);animation:drop .25s ease-out}
+.bubble.thanks .prime{display:block;margin-top:4px;font-size:12px;font-weight:700;color:var(--or)}

@@ -6,6 +6,7 @@ import { payroll } from "./staff.js";
 import { infoDialog } from "./modal.js";
 import { fmt } from "./util.js";
 import { sfx } from "./audio.js";
+import { streakText } from "./streak.js";
 
 function duration(sec) {
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
@@ -47,6 +48,7 @@ export function checkOffline() {
      ${euro >= 0
        ? `<p>Tes clients et tes agences ont continué à produire, salaires déduits : <b class="gold">+${fmt(euro)} EUR</b></p>`
        : `<p>Tes salaires ont dépassé tes revenus pendant ton absence : <b>-${fmt(-euro)} EUR</b>. Ta caisse ne passe jamais sous zéro.</p>`}
+     ${streakText() ? `<p class="muted small">${streakText()}</p>` : ""}
      <p class="muted small">Hors ligne, tu touches ${Math.round(O.rate * 100)} % des abonnements.</p>${capped}`,
     "Reprendre");
 }

@@ -5,7 +5,7 @@ import { addSystem } from "./loop.js";
 import { on } from "./events.js";
 import { sfx } from "./audio.js";
 import { toast } from "./toast.js";
-import { DATA, getEmp } from "./data.js";
+import { DATA, getEmp, rollRarity, rarityIdx, applyRarity, rarityDef } from "./data.js";
 import { makeOffer } from "./clients.js";
 import { cleanPhotos } from "./avatar.js";
 
@@ -76,7 +76,7 @@ function finishClientAd() {
 }
 
 // Cree un profil (stocke dans state.people) : meme tirage u pour le temps, la competence, l'embauche et le salaire.
-function generateEmployee(tier) {
+function generateEmployee(tier, minRarity = null) {
   const G = A.recruit.generator[tier - 1], N = DATA.names;
   const u = Math.random(), lerp = (r, k = u) => r[0] + (r[1] - r[0]) * k;
   const id = "g" + state.nextPersonId++;
@@ -89,6 +89,7 @@ function generateEmployee(tier) {
     hire: Math.max(10, Math.round(lerp(G.hire, hireK) / 5) * 5), salary: +lerp(G.salary, hireK).toFixed(2),
   };
   e.name = `${e.prenom} ${e.nom}`;
+  applyRarity(e, rollRarity(minRarity));          // rarete : bonus de temps et de competence
   state.people[id] = e;
   return e;
 }
@@ -97,20 +98,27 @@ function finishRecruitAd(targeted) {
   const top = maxTier() + (targeted ? 1 : 0);
   let n = rnd(A.recruit.candidates) + (state.credibility >= A.recruit.bonusCred ? 1 : 0);
   n = Math.min(n, A.recruit.maxPending - state.candidates.length);
-  let found = 0;
+  // ticket de recrutement : le premier profil est au moins rare
+  const ticket = n > 0 && state.tickets > 0;
+  if (ticket) state.tickets--;
+  let found = 0, best = null;
   for (let i = 0; i < n; i++) {
+    const minR = ticket && i === 0 ? CONFIG.rarity.ticketMin : null;
     // niveau : favorise les plus hauts permis ; petite chance d'un niveau au-dessus
     let allowed = Math.min(5, top + (Math.random() < A.recruit.luckyChance ? 1 : 0));
     const weights = Array.from({ length: allowed }, (_, k) => (k + 1) * (k + 1));
     let r = Math.random() * weights.reduce((a, b) => a + b, 0), tier = 1;
     for (; tier < allowed; tier++) { if ((r -= weights[tier - 1]) < 0) break; }
     // profil nomme (data/employees.json) de ce niveau, sinon profil genere
-    const named = DATA.employees.filter((e) => e.tier === tier && e.minCity <= state.city && !state.staff.includes(e.id) && !state.candidates.includes(e.id));
-    if (named.length && Math.random() < A.recruit.namedShare) state.candidates.push(named[Math.floor(Math.random() * named.length)].id);
-    else state.candidates.push(generateEmployee(tier).id);
+    const named = DATA.employees.filter((e) => e.tier === tier && e.minCity <= state.city && !state.staff.includes(e.id) && !state.candidates.includes(e.id) && (!minR || rarityIdx(e.rarity) >= rarityIdx(minR)));
+    let got;
+    if (named.length && Math.random() < A.recruit.namedShare) { got = named[Math.floor(Math.random() * named.length)]; state.candidates.push(got.id); state.album[got.id] = true; }   // l'album garde les profils trouves
+    else { got = generateEmployee(tier, minR); state.candidates.push(got.id); }
+    if (!best || rarityIdx(got.rarity) > rarityIdx(best.rarity)) best = got;
     found++;
   }
-  toast(found ? `Campagne terminée : ${found} profil${found > 1 ? "s" : ""} à étudier.` : "Campagne terminée : liste pleine.");
+  const star = best && rarityIdx(best.rarity) >= 2 ? ` Un profil ${rarityDef(best.rarity).label.toLowerCase()} : ${best.name} !` : "";
+  toast(found ? `Campagne terminée : ${found} profil${found > 1 ? "s" : ""} à étudier.${star}` : "Campagne terminée : liste pleine.");
   sfx.coin();
 }
 
@@ -124,4 +132,7 @@ function tick(dt) {
 }
 
 on("agencyReset", () => { acc = 0; });
-export function initAds() { addSystem(tick); }
+export function initAds() {
+  for (const id of [...state.staff, ...state.candidates]) if (DATA.byId[id]) state.album[id] = true;   // saves anterieures : ces profils sont deja trouves
+  addSystem(tick);
+}

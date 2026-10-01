@@ -5,6 +5,7 @@ import { sfx } from "../audio.js";
 import { confirmDialog } from "../modal.js";
 import { portrait, activePerson } from "../bubbles.js";
 import { avatar } from "../avatar.js";
+import { DATA, rarityDef, initials } from "../data.js";
 import { recruit, upgrade, upgradeCost, isVisible, jaddTap, goodChance, goodEffectMult } from "../crew.js";
 import { huntSpeed, huntMode, huntCount, MODES } from "../security.js";
 import { staffList, directorStat, candidates, hire, fire, maxStaff, officeMax, nextOffice, officeCost, upgradeOffice, hireCost } from "../staff.js";
@@ -12,6 +13,8 @@ import { recruitAdCost, canRecruitAd, launchRecruitAd, adRunning, adLeft, dismis
 
 const T = CONFIG.team;
 const pct = (v) => Math.round(v * 100);
+const rarCls = (p) => "rar-" + (p.rarity || "commun");                       // bordure de couleur de la photo
+const rarTxt = (p) => (p.rarity && p.rarity !== "commun" ? ` · ${rarityDef(p.rarity).label}` : "");
 const effect = (id) => {
   const m = state.team[id];
   const n = directorStat(id), work = `${n.time} h de travail · compétence ${n.skill}`;
@@ -35,7 +38,7 @@ export default {
     const sig = () => JSON.stringify([
       Object.keys(T).map((id) => [state.team[id].on, state.team[id].lvl, isVisible(id), state.money >= (state.team[id].on ? upgradeCost(id) : T[id].recruit)]),
       state.staff, state.assign, state.clients.map((c) => c.id), state.candidates, candidates().map((e) => state.money >= hireCost(e)),
-      state.city, state.office, state.money >= officeCost(), adRunning("recruit"), canRecruitAd(), canRecruitAd(true), recruitAdCost(), maxTier(),
+      state.city, state.office, state.money >= officeCost(), Object.keys(state.album), state.tickets, adRunning("recruit"), canRecruitAd(), canRecruitAd(true), recruitAdCost(), maxTier(),
     ]);
     this.cards = {};
     this.view = liveView(root, sig, (r, live) => {
@@ -76,7 +79,7 @@ export default {
       for (const p of hired) {
         const cl = state.clients.find((c) => c.id === state.assign[p.id]);
         const c = el("div", "card emp");
-        c.innerHTML = `${avatar(p, "", "e:" + p.id)}<span class="pt"><span class="nm">${p.name}</span><span class="rl">${p.title}</span>
+        c.innerHTML = `${avatar(p, rarCls(p), "e:" + p.id)}<span class="pt"><span class="nm">${p.name}</span><span class="rl">${p.title}${rarTxt(p)}</span>
           <span class="fx">${p.time} h · niveau ${p.skill} · salaire ${fmt2(p.salary)} EUR/s</span><span class="ds">${cl ? "Travaille pour " + cl.name : "Sans affectation"}</span></span>`;
         const f = el("button", "btn small-btn ghost", "Licencier");
         f.onclick = async () => { if (await confirmDialog("Licencier ?", `${p.name} quittera K'X. Son embauche ne sera pas remboursée.`, "Licencier")) fire(p.id); };
@@ -107,11 +110,12 @@ export default {
       });
       r.append(ad);
 
+      if (state.tickets > 0) r.append(el("p", "muted small", `Ticket de recrutement : ${state.tickets}. La prochaine campagne te garantit un profil ${rarityDef(CONFIG.rarity.ticketMin).label.toLowerCase()} ou mieux.`));
       const cands = candidates();
       if (cands.length) r.append(el("p", "qlabel", "Profils à étudier"));
       for (const e of cands) {
         const c = el("div", "card emp cand");
-        c.innerHTML = `${avatar(e, "", "e:" + e.id)}<span class="pt"><span class="nm">${e.name}</span><span class="rl">${e.titre} · profil ${e.tier}/5</span>
+        c.innerHTML = `${avatar(e, rarCls(e), "e:" + e.id)}<span class="pt"><span class="nm">${e.name}</span><span class="rl">${e.titre} · profil ${e.tier}/5${rarTxt(e)}</span>
           <span class="fx">${e.time} h · niveau ${e.skill} · salaire ${fmt2(e.salary)} EUR/s</span></span>`;
         const col = el("span", "btncol");
         const b = el("button", "btn small-btn", `Embaucher<br><small>${fmt(hireCost(e))} EUR</small>`);
@@ -122,6 +126,20 @@ export default {
         col.append(b, no); c.append(col);
         r.append(c);
       }
+
+      // album : tous les profils nommes ; ceux pas encore trouves sont en silhouette. Commun a l'entreprise.
+      const all = [...DATA.employees].sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
+      const got = all.filter((e) => state.album[e.id]).length;
+      r.append(el("div", "qhead", `<h2 class="h">Album</h2><span class="qcount">${got} / ${all.length} trouvés</span>`));
+      r.append(el("p", "muted small", "Chaque profil trouvé par une campagne reste dans l'album, même après un licenciement ou une remise à zéro."));
+      const grid = el("div", "album");
+      for (const e of all) {
+        const found = !!state.album[e.id];
+        grid.append(el("div", "albcell" + (found ? "" : " sil"), found
+          ? `<span class="frame ini tier${e.tier} rar-${e.rarity}"><b>${initials(e)}</b></span><span class="albn">${e.name}</span><span class="albr rar-${e.rarity}">${rarityDef(e.rarity).label}</span>`
+          : `<span class="frame sil"><b>?</b></span><span class="albn">???</span>`));
+      }
+      r.append(grid);
     });
   },
   update() {

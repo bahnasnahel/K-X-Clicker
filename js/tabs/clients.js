@@ -7,6 +7,7 @@ import { modal, infoDialog, confirmDialog } from "../modal.js";
 import { avatar } from "../avatar.js";
 import { signOffer, dropOffer, terminateClient, satRate, clientIncome, incomePerSec, previewService, rankLabel } from "../clients.js";
 import { staffList, assignedTo, timeGiven, skillGiven, service, assign, autoAssign, payroll } from "../staff.js";
+import { renderMissions } from "../missions.js";
 import { clientAdCost, adIsFree, canClientAd, launchClientAd, adRunning, adLeft } from "../ads.js";
 
 const types = (list) => list.map((t) => `<span class="t-${t}">${icon(t, 16)}</span>`).join("");
@@ -35,7 +36,7 @@ export default {
   id: "clients", label: "Clients", icon: "clients",
   badge: () => state.offers.length > 0,
   mount(root) {
-    const sig = () => JSON.stringify([state.offers.map((o) => o.id), state.clients.map((c) => c.id), state.autoAssign, state.assign, state.staff, adRunning("client"), canClientAd(), clientAdCost(), state.team.nahel.lvl]);
+    const sig = () => JSON.stringify([state.offers.map((o) => o.id), state.clients.map((c) => c.id), state.autoAssign, state.assign, state.staff, state.missions.list.map((m) => [m.id, m.done]), state.missions.swapAt <= state.stats.playSeconds, adRunning("client"), canClientAd(), clientAdCost(), state.team.nahel.lvl]);
     this.view = liveView(root, sig, (r, live) => {
       const help = el("button", "helpbtn", "<i>?</i>"); help.setAttribute("aria-label", "Aide : crédibilité");
       help.onclick = () => { const [t, txt] = CONFIG.help.credibility; infoDialog(t, `<p>${txt}</p>`, "Compris"); };
@@ -58,6 +59,8 @@ export default {
         setText(fin, `Abonnements +${fmt2(incomePerSec())} EUR/s · Salaires −${fmt2(payroll())} EUR/s`);
       });
       r.append(cred);
+
+      renderMissions(r, live);
 
       // capacite de l'equipe : temps et competences disponibles / utilises
       const cap = el("div", "card capcard");

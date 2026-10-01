@@ -2,6 +2,7 @@
 // Il change avec le niveau du bureau (state.office) et montre l'equipe (state.staff).
 import { state } from "./state.js";
 import { getEmp } from "./data.js";
+import { status } from "./workflows.js";
 
 const W = 160, H = 72;
 const C = {
@@ -12,7 +13,10 @@ const TIER = ["#b9a3ee", "#9A6BFF", "#D36BFF", "#ECE6FA", "#FFD479"];
 
 let cv, g;
 // windowOpen : 0..1 (Jadd ouvre la fenetre) ; passer : { kind, p } quelque chose passe devant la fenetre
-export const deskFx = { windowOpen: 0, passer: null };
+// golden : { kind, p } bonus dore qui passe derriere la fenetre (tape-le !)
+export const deskFx = { windowOpen: 0, passer: null, golden: null };
+// taille du dessin, position de la fenetre, et ancrage vertical du recadrage (meme valeur que object-position dans le CSS)
+export const DESK = { W, H, win: { x: 122, y: 8, w: 30, h: 30 }, posY: 0.65 };
 
 export function initRender(canvas) {
   cv = canvas; cv.width = W; cv.height = H;
@@ -22,10 +26,10 @@ export function initRender(canvas) {
 
 const r = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
 
-function monitor(x, y, t) {
+function monitor(x, y, t, lines = 4) {          // lines : plus il y a d'automatisations, plus l'ecran s'allume
   r(x, y, 26, 18, C.n1);
   r(x + 1, y + 1, 24, 14, C.n3);
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < lines; i++) {
     const w = 6 + ((i * 7 + Math.floor(t / 900)) % 14);
     r(x + 3, y + 3 + i * 3, w, 1, i % 2 ? C.v : C.m);
   }
@@ -67,6 +71,53 @@ function passer(fx, fy, t) {
   g.restore();
 }
 
+// ---- ce que les automatisations ajoutent au bureau ----
+const ROBOT = ["#9A6BFF", "#D36BFF", "#4fa8ff", "#5cf0a0", "#ff9f43", "#ECE6FA"];
+const LED = { ok: "#5cf0a0", paused: "#ff5d7a", crashed: "#ff5d7a", off: C.n3 };
+
+// robot d'une automatisation : de plus en plus equipe avec son niveau (antenne, voyant, visiere doree)
+function robot(x, y, col, lvl, t, st) {
+  const bob = st === "ok" ? Math.round(Math.sin(t / 260 + x) * 1) : 0;
+  y += bob;
+  r(x + 1, y, 4, 3, lvl >= 10 ? C.or : col);                       // tete
+  r(x + 2, y + 1, 1, 1, C.n1); r(x + 4, y + 1, 1, 1, st === "ok" ? C.l : "#ff5d7a");   // yeux
+  if (lvl >= 3) { r(x + 3, y - 2, 1, 2, C.l); r(x + 2, y - 3, 3, 1, st === "ok" && Math.floor(t / 300) % 2 ? C.or : C.m); }   // antenne
+  r(x, y + 3, 6, 4, col);                                             // corps
+  if (lvl >= 5) r(x + 2, y + 4, 2, 2, Math.floor(t / 400) % 2 ? C.l : C.n1);       // voyant sur le torse
+  if (lvl >= 8) { r(x - 1, y + 3, 1, 3, C.or); r(x + 6, y + 3, 1, 3, C.or); }      // bras renforces
+  else { r(x - 1, y + 4 + (Math.floor(t / 500) % 2), 1, 3, col); r(x + 6, y + 4, 1, 3, col); }
+  r(x, y + 7, 2, 2, C.n1); r(x + 4, y + 7, 2, 2, C.n1);               // pieds
+}
+
+// baie de serveurs : voyants qui clignotent
+function rack(x, y, t, seed) {
+  r(x, y, 8, 24, C.n3); r(x + 1, y + 1, 6, 22, C.n1);
+  for (let i = 0; i < 7; i++) {
+    const on = (Math.floor(t / (350 + seed * 40)) + i * 3 + seed) % 5 !== 0;
+    r(x + 2, y + 3 + i * 3, 4, 1, on ? [C.m, C.v, "#5cf0a0"][(i + seed) % 3] : C.n3);
+  }
+}
+
+// bonus dore : halo qui clignote, etincelles et objet dore qui traverse la fenetre
+function golden(fx, fy, t) {
+  const gd = deskFx.golden;
+  if (!gd) return;
+  g.save();
+  g.globalAlpha = 0.45 + 0.4 * Math.sin(t / 130);
+  r(fx - 3, fy - 3, 36, 2, C.or); r(fx - 3, fy + 31, 36, 2, C.or); r(fx - 3, fy - 3, 2, 36, C.or); r(fx + 31, fy - 3, 2, 36, C.or);
+  g.restore();
+  g.save(); g.beginPath(); g.rect(fx, fy, 30, 30); g.clip();
+  const x = Math.round(fx - 16 + gd.p * 62), y = fy + 9 + Math.round(Math.sin(t / 240) * 3), up = Math.floor(t / 110) % 2;
+  switch (gd.kind) {
+    case "pigeon": r(x + 1, y + 1, 7, 4, C.or); r(x + 8, y, 3, 3, C.or); r(x + 11, y + 1, 2, 1, "#ff9f43"); r(x + 9, y + 1, 1, 1, C.n1); r(x + 2, y + (up ? -2 : 4), 4, 2, "#fff2c2"); r(x - 2, y + 2, 3, 2, "#fff2c2"); break;
+    case "drone":  r(x + 2, y + 2, 8, 3, C.or); r(x + 4, y + 1, 4, 1, "#fff2c2"); r(x - 2, y, 6, 1, up ? C.or : "#fff2c2"); r(x + 8, y, 6, 1, up ? "#fff2c2" : C.or); r(x + 3, y + 5, 1, 2, C.or); r(x + 8, y + 5, 1, 2, C.or); break;
+    case "avion":  r(x + 10, y + 2, 10, 3, C.or); r(x + 18, y + 1, 3, 2, "#fff2c2"); r(x + 13, y, 3, 2, C.or); r(x + 13, y + 5, 3, 2, C.or); r(x + 20, y + 3, 1, 1, C.n1);
+                   r(x - 4, y + 1, 12, 5, "#fff2c2"); r(x + 8, y + 3, 2, 1, C.or); for (let i = 0; i < 4; i++) r(x - 3 + i * 3, y + 2 + (i % 2), 2, 1, C.or); break;
+  }
+  for (let i = 0; i < 6; i++) r(x + ((i * 13 + Math.floor(t / 110) * 7) % 18) - 3, y - 3 + ((i * 7 + Math.floor(t / 90) * 5) % 12), 1, 1, i % 2 ? C.l : C.or);
+  g.restore();
+}
+
 export function draw(t) {
   if (!g) return;
   const lvl = Math.min(state.office, 4);
@@ -84,6 +135,7 @@ export function draw(t) {
   r(fx, fy, 30, 30, C.n1);
   for (let i = 0; i < 6; i++) r(fx + 3 + ((i * 11) % 24), fy + 3 + ((i * 7) % 22), 1, 1, C.l);
   passer(fx, fy, t);
+  golden(fx, fy, t);
   r(fx + 14, fy, 2, 30, C.v);
   const open = deskFx.windowOpen;
   if (open > 0) r(fx, fy, Math.round(14 * (1 - open)) + 2, 30, C.n3);
@@ -104,6 +156,13 @@ export function draw(t) {
     r(54, 4, 52, 26, C.v); r(55, 5, 50, 24, C.n1);
     for (let i = 0; i < 10; i++) { const h = 4 + ((i * 7 + Math.floor(t / 700)) % 14); r(58 + i * 4.6, 27 - h, 3, h, i % 2 ? C.m : C.v); }
   }
+  // serveurs : de plus en plus avec les niveaux d'automatisation et les agences ouvertes
+  const autos = Object.keys(state.auto).filter((k) => state.auto[k].level > 0);
+  const totalLvl = autos.reduce((sum, k) => sum + state.auto[k].level, 0);
+  const owned = state.cities.filter((c) => c.unlocked).length;
+  const racks = Math.min(9, Math.floor(totalLvl / 2) + Math.max(0, owned - 1));
+  for (let i = 0; i < racks; i++) rack(112 - i * 8, 6, t, i);
+
   // lumieres au plafond
   if (lvl >= 3) { r(30, 0, 14, 2, C.l); r(80, 0, 14, 2, C.l); r(130, 0, 14, 2, C.l); }
 
@@ -112,9 +171,12 @@ export function draw(t) {
   else { r(30, 52, 100, 4, C.v); r(30, 56, 100, 1, C.n3); r(34, 57, 4, 15, C.n3); r(122, 57, 4, 15, C.n3); }
 
   // ecrans
-  if (lvl === 0) monitor(67, 31, t);
-  else if (lvl === 1) { monitor(54, 31, t); monitor(80, 31, t); }
-  else { monitor(40, 31, t); monitor(67, 31, t); monitor(94, 31, t); }
+  const lines = Math.min(4, 1 + autos.length);
+  if (lvl === 0) monitor(67, 31, t, lines);
+  else if (lvl === 1) { monitor(54, 31, t, lines); monitor(80, 31, t, lines); }
+  else { monitor(40, 31, t, lines); monitor(67, 31, t, lines); monitor(94, 31, t, lines); }
+  // voyants sur le bureau : un par automatisation (vert = en marche, rouge = attaquee ou plantee)
+  Object.keys(state.auto).filter((k) => state.auto[k].level > 0).forEach((k, i) => r((lvl === 0 ? 52 : 32) + i * 5, 53, 3, 2, LED[status(k)] || LED.off));
 
   // poste de travail a gauche (niveau 2 et plus)
   if (lvl >= 2) { r(2, 52, 26, 3, C.v); r(4, 55, 3, 17, C.n3); r(23, 55, 3, 17, C.n3); r(8, 38, 14, 11, C.n1); r(9, 39, 12, 8, C.n3); r(10, 41, 7, 1, C.m); r(10, 44, 9, 1, C.v); }
@@ -126,8 +188,11 @@ export function draw(t) {
   if (lvl >= 3) { r(148, 56, 8, 10, C.n3); r(150, 46, 2, 10, C.v); r(146, 50, 4, 2, C.m); r(152, 48, 4, 2, C.v); }
 
   // l'equipe : un petit personnage par employe (couleur = niveau du profil)
-  const n = Math.min(state.staff.length, 10);
+  const n = Math.min(state.staff.length, 8);
   for (let i = 0; i < n; i++) { const e = getEmp(state.staff[i]); person(40 + i * 11, 56, TIER[(e ? e.tier : 1) - 1]); }
+
+  // robots : un par automatisation installee, son niveau les equipe
+  autos.forEach((k, i) => robot(i < 4 ? 130 + i * 7 : 134 + (i - 4) * 8, i < 4 ? 55 : 46, ROBOT[i % ROBOT.length], state.auto[k].level, t, status(k)));
 
   if (state.team.jadd.on) jadd(open);
 }

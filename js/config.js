@@ -493,6 +493,67 @@ export const CONFIG = {
   ],
 
   // --- Textes d'aide des « ? » ---
+  // --- Bonus dore : un objet brillant passe derriere la fenetre du bureau, il faut la taper ---
+  golden: {
+    everySec: [120, 300],       // delai entre deux passages
+    lifeSec: 8,                 // temps pour le taper
+    jaddBonusEvery: 5,          // si Jadd est recrute : +1 s tous les 5 niveaux de Jadd
+    kinds: ["pigeon", "drone", "avion"],
+    // mult/durSec : bonus qui dure ; incomeSec : argent = ce nombre de secondes de revenus (au moins minEuro) ; w : poids du tirage
+    bonuses: [
+      { id: "gain",  label: "Gains x5",             mult: 5, durSec: 30, w: 1 },
+      { id: "money", label: "Argent",               incomeSec: 600, minEuro: 100, w: 1 },
+      { id: "auto",  label: "Automatisations x3",   mult: 3, durSec: 60, w: 1 },
+      { id: "calm",  label: "Stress à zéro",        w: 1 },
+    ],
+  },
+
+  // --- Collection d'employes : rarete des profils de recrutement ---
+  // chance : tirage ; timeMult : x temps ; skillAdd : + competence (max 10). Les profils de data/employees.json peuvent avoir "rarity": "legendaire".
+  rarity: {
+    list: [
+      { id: "commun",     label: "Commun",     chance: 0.68, timeMult: 1,    skillAdd: 0, color: "#b9a3ee" },
+      { id: "rare",       label: "Rare",       chance: 0.22, timeMult: 1.15, skillAdd: 0, color: "#4fa8ff" },
+      { id: "epique",     label: "Épique",     chance: 0.08, timeMult: 1.3,  skillAdd: 1, color: "#D36BFF" },
+      { id: "legendaire", label: "Légendaire", chance: 0.02, timeMult: 1.5,  skillAdd: 2, color: "#FFD479" },
+    ],
+    ticketMin: "rare",          // un ticket de recrutement garantit au moins cette rarete
+  },
+
+  // --- Missions : 3 a la fois, objectifs et recompenses calcules sur ta progression ---
+  missions: {
+    count: 3,
+    swapCooldownSec: 600,       // changer une mission : gratuit une fois toutes les 10 min
+    earnSec: 300,               // "gagner X EUR" = environ 5 min de revenus
+    rewardSec: 180,             // recompense = environ 3 min de revenus (ou d'heures)
+    minRate: 0.5,               // revenu/s minimum pris en compte (debut de partie)
+    minReward: 20,
+    ticketChance: 0.12,         // part des recompenses qui sont un ticket de recrutement
+    hoursChance: 0.3,           // part des recompenses en heures (si tu en gagnes)
+    signGoal: [1, 3],           // nombre de clients a signer
+    autoSec: 120,               // "automatiser N taches" = environ 2 min de cette automatisation
+    autoMin: 5, autoMax: 150,
+    attackGoal: [2, 5],         // attaques a repousser
+  },
+
+  // --- Serie de jours : jours d'affilee ou tu ouvres le jeu (date locale) ---
+  streak: {
+    capDays: 7,                 // plafond de la serie pour les recompenses
+    rewardMin: 20,              // argent offert = max(rewardMin, rewardSec x revenu/s) x jours de serie
+    rewardSec: 60,
+    gainPerDay: 0.05,           // +5 % de gains par jour de serie, pour la journee
+    gainMax: 0.35,
+  },
+
+  // --- Remerciements des clients contents ---
+  thanks: {
+    everySec: [90, 180],        // delai entre deux remerciements
+    minSat: 90,                 // satisfaction minimale du client
+    bonusSec: 60,               // prime = ce nombre de secondes de ce que rapporte ce client
+    minBonus: 5,
+    lifeSec: 10,                // la bulle disparait apres
+  },
+
   help: {
     money: ["Argent", "Tu gagnes des euros en traitant des tâches à la main, avec les abonnements de tes clients et avec tes automatisations. Tu les dépenses pour la publicité, les employés, le bureau, les automatisations et les directeurs."],
     hours: ["Heures gagnées", "Chaque tâche traitée automatiquement te fait gagner du temps : ce sont les heures gagnées. Tu n'en gagnes pas en traitant à la main. Dépense-les pour monter tes automatisations. Leur total te rapproche aussi de l'ouverture d'une nouvelle agence."],

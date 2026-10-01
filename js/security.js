@@ -13,6 +13,7 @@ import { modal } from "./modal.js";
 import { activeTypes, auto } from "./workflows.js";
 import { spawnTask } from "./tasks.js";
 import { incomePerSec, removeClient } from "./clients.js";
+import { gainMoney } from "./fx.js";
 
 const A = CONFIG.attacks, S = CONFIG.security, N = CONFIG.team.noah, E = CONFIG.enemies;
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -82,9 +83,8 @@ export const bounty = (e) => Math.round(Math.max(E.bountyMin * e.lvl, incomePerS
 function destroy(e) {
   state.enemies = state.enemies.filter((x) => x.id !== e.id);
   const b = bounty(e);
-  state.money += b; state.runMoney += b; state.stats.moneyEarned += b;
+  gainMoney(b);                                  // le montant saute, avec le son des pieces
   state.stats.enemiesDestroyed++;
-  sfx.coin();
   bubble("noah", `${e.name} est neutralisé. Justice rendue : +${fmt(b)} EUR.`);
 }
 

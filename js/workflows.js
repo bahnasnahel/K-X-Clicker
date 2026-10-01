@@ -1,7 +1,7 @@
 // Automatisation : un niveau par type de tache. Plus le niveau est haut, plus c'est rapide
 // et plus de taches difficiles sont gerees. Verification = plus sur mais plus lent.
 import { CONFIG } from "./config.js";
-import { state, earn, yanisHoursMult, noteFlow, shopPct, shopDiscount } from "./state.js";
+import { state, earn, yanisHoursMult, noteFlow, shopPct, shopDiscount, bonusMult } from "./state.js";
 import { addSystem } from "./loop.js";
 import { emit } from "./events.js";
 import { sfx } from "./audio.js";
@@ -27,7 +27,7 @@ export function rate(type) {
   if (L <= 0) return 0;
   const y = state.team.yanis;
   const team = y.on ? 1 + y.lvl * CONFIG.team.yanis.speedBonus : 1;
-  return A.baseRate * Math.pow(A.rateGrowth, L - 1) * (verifyOn(type) ? A.verifySpeed : A.noVerifyBonus) * team * shopPct("autoSpeed");
+  return A.baseRate * Math.pow(A.rateGrowth, L - 1) * (verifyOn(type) ? A.verifySpeed : A.noVerifyBonus) * team * shopPct("autoSpeed") * bonusMult("auto");
 }
 
 export function status(type) {

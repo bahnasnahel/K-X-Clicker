@@ -17,6 +17,10 @@ import { initUnlocks } from "./unlocks.js";
 import { initSecurity } from "./security.js";
 import { initLawsuit } from "./lawsuit.js";
 import { initAds } from "./ads.js";
+import { initGolden } from "./golden.js";
+import { initMissions } from "./missions.js";
+import { initThanks } from "./thanks.js";
+import { checkStreak } from "./streak.js";
 import { initAgencies } from "./agencies.js";
 
 await loadData();
@@ -30,6 +34,9 @@ initStaff();
 initAds();
 initAgencies();
 initLawsuit();
+initGolden();
+initMissions();
+initThanks();
 initUnlocks();
 initAchievements();
 initRender(document.getElementById("desk"));
@@ -38,9 +45,10 @@ addFrame((t) => { draw(t); updateUI(); });
 startAutosave();
 startLoop();
 
+checkStreak();
 checkOffline();
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") checkOffline();
+  if (document.visibilityState === "visible") { checkStreak(); checkOffline(); }
 });
 if (!state.settings.tutorialDone) setTimeout(startTutorial, 400);
 

@@ -8,6 +8,7 @@ import { modal } from "./modal.js";
 import { sfx } from "./audio.js";
 import { toast } from "./toast.js";
 import { service } from "./staff.js";
+import { gainMoney } from "./fx.js";
 import { removeClient } from "./clients.js";
 
 const L = CONFIG.lawsuit;
@@ -45,7 +46,7 @@ function trigger() {
     court.onclick = () => {
       if (Math.random() < chance) {
         const dmg = Math.round(fine * L.damagesShare);
-        state.money += dmg; state.runMoney += dmg; state.stats.moneyEarned += dmg;
+        gainMoney(dmg);
         cred(L.courtWinCred); sfx.unlock(); toast(`Procès gagné : ${worst.name} te verse ${fmt(dmg)} EUR de dommages et ta crédibilité remonte.`);
       } else {
         state.money = Math.max(0, state.money - fine * L.courtLoseCostMult);

@@ -10,6 +10,8 @@ import { startTutorial } from "./tutorial.js";
 import { openCheat, cheatActive, cheatLabel } from "./cheat.js";
 import { stressMult } from "./state.js";
 import { nextAgencyProgress } from "./agencies.js";
+import { streakText } from "./streak.js";
+import { grabGolden, hitWindow, goldenHere, updatePills } from "./golden.js";
 import tasks from "./tabs/tasks.js";
 import workflows from "./tabs/workflows.js";
 import clients from "./tabs/clients.js";
@@ -59,6 +61,29 @@ export function initUI() {
   document.body.append(al);
   ui.alert = al;
 
+  // vue complete du bureau : tape-le, ou tire vers le bas en haut de page ; on referme en defilant vers le bas ou en retapant
+  const top = $("#top"), desk = $("#desk"), mainEl = $("#main");
+  let expanded = false, down = null, ty = null, atTop = false;
+  const setExpanded = (v) => { expanded = v; top.classList.toggle("expanded", v); };
+  desk.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY }; });
+  desk.addEventListener("pointerup", (e) => {
+    const d = down; down = null;
+    if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) return;
+    if (goldenHere() && hitWindow(e.clientX, e.clientY, desk)) { grabGolden(); return; }   // bonus dore : on a tape la fenetre
+    setExpanded(!expanded); sfx.tab();
+  });
+  mainEl.addEventListener("wheel", (e) => {
+    if (e.deltaY < 0 && mainEl.scrollTop <= 0 && !expanded) setExpanded(true);
+    else if (e.deltaY > 0 && expanded) setExpanded(false);
+  }, { passive: true });
+  mainEl.addEventListener("touchstart", (e) => { ty = e.touches[0].clientY; atTop = mainEl.scrollTop <= 0; }, { passive: true });
+  mainEl.addEventListener("touchmove", (e) => {
+    if (ty == null) return;
+    const dy = e.touches[0].clientY - ty;
+    if (dy > 50 && atTop && !expanded) { setExpanded(true); ty = null; }
+    else if (dy < -40 && expanded) { setExpanded(false); ty = null; }
+  }, { passive: true });
+
   // pastille visible quand le mode triche est actif (tape pour l'ouvrir)
   const ch = el("button", "cheatbadge hidden");
   ch.onclick = openCheat;
@@ -92,6 +117,7 @@ export function updateUI() {
   set("stress", $("#c-stress"), Math.round(state.stress) + " %");
   const np = nextAgencyProgress();
   set("agencyHint", $("#desk-hint"), np && state.flags.agency ? `K'X ${np.name} : ${Math.floor(np.pct * 100)} %` : "");
+  set("streak", $("#desk-streak"), state.settings.tutorialDone ? streakText() : "");
   $("#cell-hours").hidden = !state.flags.hours;
   $("#stress-cell").hidden = !state.flags.stress;
   $("#bar-stress").style.width = state.stress + "%";
@@ -116,6 +142,8 @@ export function updateUI() {
     if (!isVisible(x) || x.id === current) { buttons[x.id].classList.remove("badged"); continue; }
     buttons[x.id].classList.toggle("badged", !state.seen[x.id] || !!(x.badge && x.badge()));
   }
+
+  updatePills();
 
   const on = cheatActive();
   ui.cheat.classList.toggle("hidden", !on);
