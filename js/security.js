@@ -1,6 +1,6 @@
 // Securite : mesures permanentes, score de securite et attaques variees (phishing, DDoS, ransomware, fuite de donnees).
-// Noah (direction) reduit la frequence des attaques et en bloque une partie ; les mesures en bloquent aussi (selon la sorte).
-// Une attaque qui passe ouvre une decision : chaque option a son cout.
+// Les attaques viennent d'ennemis (plus d'argent gagne = plus d'ennemis, plus forts). Noah les traque et les detruit.
+// Les mesures bloquent une partie des attaques. Une attaque qui passe ouvre une decision : chaque option a son cout.
 import { CONFIG } from "./config.js";
 import { state, securityScore } from "./state.js";
 import { addSystem } from "./loop.js";
@@ -14,7 +14,7 @@ import { activeTypes, auto } from "./workflows.js";
 import { spawnTask } from "./tasks.js";
 import { incomePerSec, removeClient } from "./clients.js";
 
-const A = CONFIG.attacks, S = CONFIG.security, N = CONFIG.team.noah;
+const A = CONFIG.attacks, S = CONFIG.security, N = CONFIG.team.noah, E = CONFIG.enemies;
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const label = (t) => CONFIG.tasks[t].label;
 const noah = () => state.team.noah;
@@ -39,11 +39,55 @@ export const measureBlock = (kind) => {
   return m ? Math.min(S.blockMax, measureLvl(m.id) * m.blockPerLevel) : 0;
 };
 
-// ---- Noah (direction) ----
-export const noahReduce = () => (noah().on ? Math.min(N.reduceMax, N.reduceBase + N.reducePerLevel * noah().lvl) : 0);
-export const noahBlock = () => (noah().on ? Math.min(N.blockMax, N.blockBase + N.blockPerLevel * noah().lvl) : 0);
+// ---- Ennemis ----
+const L1 = (lvl) => E.levels[lvl - 1];
+export const heat = () => Math.log10(1 + state.runMoney / E.moneyScale);
+export const enemyCap = () => Math.min(E.capMax, Math.floor(E.capBase + E.capPerHeat * heat()));
+const maxEnemyLevel = () => Math.min(E.levels.length, 1 + Math.floor(heat() / E.heatPerLevel));
+export const enemyLabel = (e) => L1(e.lvl);
+export const styleOf = (e) => E.styles[e.style];
+const attackGap = (e) => E.attackEverySec / (1 + E.attackPerLevel * (e.lvl - 1)) / styleOf(e).rate;   // delai moyen entre deux attaques
 
-export const attackPower = () => Math.min(A.powerMax, 1 + Math.floor(state.hoursRun / A.powerEveryHours) + state.city);
+function spawnEnemy() {
+  const now = state.stats.playSeconds;
+  const lvl = Math.min(maxEnemyLevel(), 1 + Math.floor(Math.pow(Math.random(), E.levelBias) * maxEnemyLevel()));
+  const style = pick(Object.keys(E.styles)), st = E.styles[style];
+  const kinds = Object.keys(A.kinds);
+  const e = {
+    id: state.nextEnemyId++, lvl, style, kind: pick(kinds),
+    name: `${pick(E.names)}_${10 + Math.floor(Math.random() * 90)}`,
+    power: Math.max(1, Math.min(A.powerMax, Math.round((1 + E.powerPerLevel * (lvl - 1)) * st.power) + state.city)),
+  };
+  e.maxHp = e.hp = Math.round(E.hpBase * Math.pow(lvl, E.hpPow) * st.hp);
+  e.next = now + attackGap(e) * (0.5 + Math.random() * 0.5);
+  state.enemies.push(e);
+  bubble("noah", `Nouvel ennemi repéré : ${e.name} (${L1(lvl)}, ${st.label.toLowerCase()}).`);
+}
+
+// ---- Noah : traque et detruit les ennemis, un par un ----
+export const huntSpeed = () => (noah().on ? N.huntBase + N.huntPerLevel * noah().lvl : 0);
+export const MODES = { strong: "Le plus fort", weak: "Le plus faible", order: "Ordre d'apparition" };
+export const huntMode = () => noah().mode || "strong";
+export const setHuntMode = (m) => { noah().mode = m; sfx.tap(); };
+export function huntTarget() {
+  const list = state.enemies;
+  if (!list.length) return null;
+  const m = huntMode();
+  if (m === "order") return list.reduce((a, b) => (b.id < a.id ? b : a));
+  const f = (e) => e.lvl * 1000 + e.maxHp;                       // force : niveau, puis temps de traque
+  return list.reduce((a, b) => ((m === "weak" ? f(b) < f(a) : f(b) > f(a)) ? b : a));
+}
+export const bounty = (e) => Math.round(Math.max(E.bountyMin * e.lvl, incomePerSec() * E.bountySec * e.lvl));
+
+function destroy(e) {
+  state.enemies = state.enemies.filter((x) => x.id !== e.id);
+  const b = bounty(e);
+  state.money += b; state.runMoney += b; state.stats.moneyEarned += b;
+  state.stats.enemiesDestroyed++;
+  sfx.coin();
+  bubble("noah", `${e.name} est neutralisé. Justice rendue : +${fmt(b)} EUR.`);
+}
+
 const fee = (K, p) => (K.feeMin ? Math.round(Math.max(K.feeMin * p, incomePerSec() * K.feeSec)) : 0);
 
 // ---- Lancement d'une attaque ----
@@ -52,11 +96,11 @@ function makeMails(n) {
   return [{ ...pick(P.bad), bad: true }, ...pool].sort(() => Math.random() - 0.5);
 }
 
-export function launchAttack(kind, power = attackPower()) {
+export function launchAttack(kind, power = 1 + state.city, by = "") {
   const targets = activeTypes();
   if (state.attack || !targets.length) return false;
   const now = state.stats.playSeconds, K = A.kinds[kind];
-  const a = { kind, type: pick(targets), power, deadline: now + A.windowSec, fee: fee(K, power) };
+  const a = { kind, type: pick(targets), power, by, deadline: now + A.windowSec, fee: fee(K, power) };
   if (kind === "phishing") a.mails = makeMails(K.mails);
   if (kind === "ransomware") auto(a.type).pausedUntil = a.deadline + K.rebuildPauseSec;   // chiffree en attendant ta decision
   state.attack = a;
@@ -141,7 +185,7 @@ export function openIncident() {
       b.onclick = () => choose(c);
       return b;
     };
-    box.append(el("h3", "h", K.label), el("p", "", K.intro));
+    box.append(el("h3", "h", K.label), el("p", "", (a.by ? `<b>${a.by}</b> t'attaque. ` : "") + K.intro));
     const bar = el("i", "bar", "<b></b>"), left = el("p", "muted small", "");
     box.append(bar, left);
     if (a.kind === "phishing") {
@@ -179,26 +223,49 @@ export function openIncident() {
 }
 
 // ---- Boucle ----
-let nextAttack = A.everySec * 0.6;
+let nextSpawn = E.firstSpawnSec;
 
-function tick() {
-  const now = state.stats.playSeconds;
-  if (state.attack && !state.attack.kind) state.attack = null;                  // ancien format
-  const a = state.attack;
-  if (a) { if (now >= a.deadline) resolve(a, A.kinds[a.kind].fallback); return; }
-  if (state.stats.autoDone < A.startAutoDone || now < nextAttack || !activeTypes().length) return;
-  const p = attackPower();
-  nextAttack = now + (A.everySec / (1 + A.frequencyPerPower * p)) / Math.max(0.2, 1 - noahReduce()) * (0.7 + Math.random() * 0.6);
-  const kind = pickKind(), K = A.kinds[kind];
-  if (Math.random() < noahBlock()) repel(`Noah a bloqué une attaque : ${K.label.toLowerCase()}.`);
-  else if (Math.random() < measureBlock(kind)) repel(`Tes mesures ont bloqué une attaque : ${K.label.toLowerCase()}.`);
-  else launchAttack(kind, p);
+function enemyAttack(e, now) {
+  e.next = now + attackGap(e) * (0.7 + Math.random() * 0.6);
+  let kind = Math.random() < E.favouriteChance ? e.kind : pick(Object.keys(A.kinds));
+  if (kind === "leak" && !state.clients.length) kind = "phishing";
+  const K = A.kinds[kind];
+  if (Math.random() < measureBlock(kind)) repel(`Tes mesures ont bloqué ${e.name} : ${K.label.toLowerCase()}.`);
+  else launchAttack(kind, e.power, e.name);
 }
 
-on("agencyReset", () => { nextAttack = A.everySec * 0.6 + state.stats.playSeconds; if (closeInc) { closeInc(true); closeInc = null; } });
+function tick(dt) {
+  const now = state.stats.playSeconds;
+  if (state.attack && !state.attack.kind) state.attack = null;                  // ancien format
+  if (!state.enemies) state.enemies = [];
+  const a = state.attack;
+  if (a && now >= a.deadline) resolve(a, A.kinds[a.kind].fallback);
+  if (!state.flags.security || state.stats.autoDone < A.startAutoDone) return;
+
+  if (!noah().on) { noah().on = true; noah().lvl = Math.max(noah().lvl, state.shop.startDir || 0); }   // Noah est offert, niveau 0
+
+  // arrivee de nouveaux ennemis : plus d'argent gagne, plus ils arrivent
+  if (now >= nextSpawn) {
+    nextSpawn = now + (E.spawnEverySec / (1 + E.spawnPerHeat * heat())) * (0.7 + Math.random() * 0.6);
+    if (state.enemies.length < enemyCap()) spawnEnemy();
+  }
+
+  // Noah traque l'ennemi vise
+  const t = huntTarget();
+  if (t) { t.hp -= huntSpeed() * dt; if (t.hp <= 0) destroy(t); }
+
+  // chaque ennemi attaque a son rythme (une seule attaque a la fois)
+  for (const e of state.enemies) {
+    if (now < e.next) continue;
+    if (state.attack || !activeTypes().length) { e.next = now + 4; continue; }
+    enemyAttack(e, now);
+  }
+}
+
+on("agencyReset", () => { nextSpawn = E.firstSpawnSec + state.stats.playSeconds; if (closeInc) { closeInc(true); closeInc = null; } });
 
 export function initSecurity() {
-  nextAttack = state.stats.playSeconds + A.everySec * 0.6;
+  nextSpawn = state.stats.playSeconds + E.firstSpawnSec;
   addSystem(tick);
 }
 

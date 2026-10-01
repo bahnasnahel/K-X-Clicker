@@ -13,7 +13,7 @@ import { deskFx } from "./render.js";
 
 const T = CONFIG.team;
 export const member = (id) => state.team[id];
-export const isVisible = (id) => id === "nahel" || !!state.flags["dir_" + id] || state.team[id].on;
+export const isVisible = (id) => id === "nahel" || !!state.flags["dir_" + id] || (id === "noah" && !!state.flags.security) || state.team[id].on;
 export const upgradeCost = (id) => Math.round(T[id].upgrade.base * Math.pow(T[id].upgrade.growth, state.team[id].lvl) * shopDiscount("officeDiscount"));
 
 export function recruit(id) {

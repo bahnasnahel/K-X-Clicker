@@ -4,7 +4,7 @@ import { CONFIG } from "./config.js";
 // Tout le reste (points, boutique, succes, statistiques, explications) est commun a l'entreprise.
 // L'argent est propre a chaque agence ; il n'est commun que pour ACHETER une nouvelle agence.
 export const AGENCY_FIELDS = ["money", "hoursSaved", "hoursRun", "runMoney", "stress", "credibility", "queue", "offers", "clients", "auto",
-  "staff", "assign", "autoAssign", "office", "ads", "candidates", "people", "photos", "attack", "sec", "team", "freeAds"];
+  "staff", "assign", "autoAssign", "office", "ads", "candidates", "people", "photos", "attack", "sec", "enemies", "team", "freeAds"];
 
 const shopLvl = (st, id) => (st.shop && st.shop[id]) || 0;
 
@@ -35,13 +35,14 @@ export function freshAgencyFields(city, st = state) {
     people: {},           // profils generes
     photos: {},           // cle (client ou employe) -> photo, sans doublon
     attack: null,         // incident de securite en cours : { kind, type, power, deadline, ... }
+    enemies: [],          // ennemis actifs : { id, name, lvl, style, kind, hp, maxHp, power, every, next }
     sec: {},              // mesures de securite : id -> niveau
     freeAds: { client: lvl("freeAds"), recruit: lvl("freeAds") },   // campagnes gratuites restantes
     team: {
       nahel: { on: true,  lvl: dir },
       yanis: { on: false, lvl: 0 },
       jadd:  { on: false, lvl: 0 },
-      noah:  { on: false, lvl: 0 },
+      noah:  { on: false, lvl: 0, mode: "strong" },
     },
   };
 }
@@ -62,6 +63,7 @@ export function defaults() {
     nextTaskId: 1,
     nextClientId: 1,
     nextPersonId: 1,
+    nextEnemyId: 1,
     flags: {},            // contenu debloque (onglets, types de taches, compteurs, directeurs)
     seen: {},             // onglets deja ouverts
     ...freshAgencyFields(0, { shop: {} }),
@@ -69,7 +71,7 @@ export function defaults() {
     stats: {
       tasksDone: 0, autoDone: 0, playSeconds: 0, bugs: 0, cleanSince: null,
       attacksRepelled: 0, windowsOpened: 0, clientsSigned: 0, clientsSatisfied: 0,
-      moneyEarned: 0, lawsuits: 0, adsLaunched: 0,
+      moneyEarned: 0, lawsuits: 0, adsLaunched: 0, enemiesDestroyed: 0,
     },
     settings: { muted: false, tutorialDone: false, speed: 1, gain: 1 },   // speed et gain : mode triche
     meta: { created: now, lastSave: now, lastActive: now },
@@ -91,7 +93,7 @@ function assign(target, src) {
 }
 
 // Ancien format d'attaque (a taper) : on l'abandonne.
-export function normalize() { if (state.attack && !state.attack.kind) state.attack = null; if (!state.sec) state.sec = {}; }
+export function normalize() { if (state.attack && !state.attack.kind) state.attack = null; if (!state.sec) state.sec = {}; if (!state.enemies) state.enemies = []; }
 
 export function load() {
   try {

@@ -1,9 +1,9 @@
 import { el, fmt, liveView } from "../util.js";
 import { CONFIG } from "../config.js";
 import { state, securityScore } from "../state.js";
-import { measureLvl, measureCost, measureMaxed, canBuyMeasure, buyMeasure, measureBlock, noahReduce, noahBlock, attackPower } from "../security.js";
+import { measureLvl, measureCost, measureMaxed, canBuyMeasure, buyMeasure, measureBlock, enemyCap, enemyLabel, styleOf, huntTarget, huntSpeed, huntMode, setHuntMode, MODES, bounty } from "../security.js";
 
-const S = CONFIG.security, A = CONFIG.attacks;
+const S = CONFIG.security, A = CONFIG.attacks, E = CONFIG.enemies;
 const pct = (v) => Math.round(v * 100);
 
 export default {
@@ -11,9 +11,9 @@ export default {
   badge: () => !!state.attack,
   mount(root) {
     const sig = () => JSON.stringify([
-      state.sec, securityScore(), S.measures.map((m) => canBuyMeasure(m.id)), state.team.noah, state.city, attackPower(), state.stats.attacksRepelled,
+      state.sec, securityScore(), S.measures.map((m) => canBuyMeasure(m.id)), state.team.noah, state.city, state.stats.attacksRepelled, state.enemies.map((e) => e.id), huntMode(),
     ]);
-    this.view = liveView(root, sig, (r) => {
+    this.view = liveView(root, sig, (r, live) => {
       r.append(el("h2", "h", "Sécurité"));
 
       // score de securite : exige par les gros clients
@@ -31,15 +31,43 @@ export default {
       }
       r.append(tiers);
 
-      // Noah : sa partie direction
+      // Noah : sa partie direction (il traque les ennemis)
       const n = state.team.noah;
       const nc = el("div", "card tiercard");
       nc.append(el("div", "credhead", "<b>Noah, direction</b>"));
       nc.append(el("span", "sdesc", n.on
-        ? `Niveau ${n.lvl} : ${pct(noahReduce())} % d'attaques en moins, et ${pct(noahBlock())} % de celles qui arrivent sont bloquées avant de t'atteindre.`
-        : "Pas encore recruté. Recrute-le dans l'onglet Équipe : les attaques arrivent moins souvent et il en bloque une partie."));
-      nc.append(el("span", "sdesc", `Puissance des attaques en ce moment : ${attackPower()}. Attaques repoussées : ${state.stats.attacksRepelled}.`));
+        ? `Niveau ${n.lvl} : il traque ${huntSpeed().toFixed(1).replace(".", ",")} point${huntSpeed() >= 2 ? "s" : ""} par seconde. Chaque ennemi détruit te rapporte de l'argent.`
+        : "Il arrive dès que la sécurité est introduite."));
+      nc.append(el("span", "sdesc", "Qui vise-t-il en priorité ?"));
+      const row = el("div", "row");
+      row.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
+      for (const [id, txt] of Object.entries(MODES)) {
+        const b = el("button", id === huntMode() ? "btn small-btn" : "btn small-btn ghost", txt);
+        b.style.cssText = "flex:1;min-width:96px;margin:0";
+        b.onclick = () => setHuntMode(id);
+        row.append(b);
+      }
+      nc.append(row);
       r.append(nc);
+
+      // ennemis actifs
+      r.append(el("div", "qhead", `<h2 class="h">Ennemis</h2><span class="qcount">${state.enemies.length} / ${enemyCap()}</span>`));
+      r.append(el("p", "muted small", "Plus tu gagnes d'argent, plus des ennemis voudront t'attaquer, et plus ils sont forts. Chacun a son style. Noah les détruit un par un."));
+      if (!state.enemies.length) r.append(el("p", "muted", "Aucun ennemi pour le moment."));
+      for (const e of state.enemies) {
+        const st = styleOf(e), K = A.kinds[e.kind];
+        const c = el("div", "card client");
+        c.innerHTML = `<span class="cinfo"><b>${e.name}</b><span class="kind">${enemyLabel(e)} (niveau ${e.lvl}) · ${st.label}</span>
+          <span class="sdesc">${st.desc} Sorte favorite : ${K.label}. Puissance ${e.power}. Butin : ${fmt(bounty(e))} EUR.</span>
+          <i class="bar"><b></b></i><span class="satline"></span></span>`;
+        const bar = c.querySelector(".bar b"), line = c.querySelector(".satline");
+        live(() => {
+          bar.style.width = Math.max(0, (e.hp / e.maxHp) * 100) + "%";
+          const tg = huntTarget(), t = tg && tg.id === e.id;
+          line.textContent = t ? "Noah le traque" : "En attente";
+        });
+        r.append(c);
+      }
 
       // mesures permanentes
       r.append(el("p", "qlabel", "Mesures de sécurité"));

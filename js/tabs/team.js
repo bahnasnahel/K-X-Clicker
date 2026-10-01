@@ -6,7 +6,7 @@ import { confirmDialog } from "../modal.js";
 import { portrait, activePerson } from "../bubbles.js";
 import { avatar } from "../avatar.js";
 import { recruit, upgrade, upgradeCost, isVisible, jaddTap, goodChance } from "../crew.js";
-import { noahReduce, noahBlock } from "../security.js";
+import { huntSpeed, huntMode, MODES } from "../security.js";
 import { staffList, directorStat, candidates, hire, fire, maxStaff, officeMax, nextOffice, officeCost, upgradeOffice, hireCost } from "../staff.js";
 import { recruitAdCost, canRecruitAd, launchRecruitAd, adRunning, adLeft, dismissCandidate, maxTier, nextTier } from "../ads.js";
 
@@ -19,7 +19,7 @@ const effect = (id) => {
   if (!m.on) return "";
   if (id === "yanis") return `Niveau ${m.lvl} · automatisation +${pct(m.lvl * T.yanis.speedBonus)} % · heures x${yanisHoursMult().toString().replace(".", ",")} · ${work}`;
   if (id === "jadd") return `Niveau ${m.lvl} · ${pct(goodChance())} % d'événements positifs · ${work}`;
-  if (id === "noah") return `Niveau ${m.lvl} · ${pct(noahReduce())} % d'attaques en moins · bloque ${pct(noahBlock())} % de celles qui arrivent · ${work}`;
+  if (id === "noah") return `Niveau ${m.lvl} · traque ${huntSpeed().toFixed(1).replace(".", ",")} pt/s · cible : ${MODES[huntMode()].toLowerCase()} · ${work}`;
 };
 const nextBonus = (id) => {           // prochain gros palier
   const every = id === "nahel" ? T.nahel.bigBoostEvery : id === "yanis" ? T.yanis.hoursEvery : 0;

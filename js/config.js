@@ -259,10 +259,9 @@ export const CONFIG = {
       recruit: 250, upgrade: { base: 200, growth: 1.5 }, maxLevel: 100,
       eventEverySec: [35, 70], goodBase: 0.3, goodPerLevel: 0.065, goodMax: 0.95 },
     noah: { name: "Noah", role: "Cybersécurité",
-      desc: "Il veille sur ton système. Chaque niveau : les attaques arrivent moins souvent, et il en bloque une partie avant même qu'elles ne t'atteignent. Il ne remplace pas ta sécurité : les mesures de l'onglet Sécurité te protègent aussi.",
-      recruit: 400, upgrade: { base: 350, growth: 1.5 }, maxLevel: 100,
-      reduceBase: 0.05, reducePerLevel: 0.012, reduceMax: 0.6,    // part des attaques qui n'arrivent jamais (frequence reduite)
-      blockBase: 0.05, blockPerLevel: 0.01, blockMax: 0.6 },      // chance de bloquer une attaque qui arrive
+      desc: "Il traque les ennemis qui t'attaquent et les détruit, un par un. Chaque niveau : il va plus vite. Chaque ennemi détruit te rapporte de l'argent. Tu choisis qui il vise en priorité dans l'onglet Sécurité.",
+      recruit: 0, upgrade: { base: 350, growth: 1.5 }, maxLevel: 100,      // offert des l'introduction de la securite
+      huntBase: 1, huntPerLevel: 0.6 },                                     // points de traque par seconde : base + niveau x par niveau
   },
 
   // --- Evenements de la fenetre de Jadd ---
@@ -285,13 +284,9 @@ export const CONFIG = {
     passers: ["oiseau", "avion", "nuage", "ballon"],
   },
 
-  // --- Attaques : quatre sortes, chacune avec sa contre-mesure et une decision ---
-  // Noah (direction) reduit leur frequence et en bloque une partie. Les mesures de securite en bloquent aussi (selon la sorte).
+  // --- Attaques : quatre sortes, chacune avec sa contre-mesure et une decision. Elles viennent des ennemis ---
   attacks: {
-    startAutoDone: 30,      // taches automatisees avant la premiere attaque (et Noah recrutable)
-    everySec: 100,          // delai moyen ; divise par (1 + frequencyPerPower x puissance)
-    frequencyPerPower: 0.12,
-    powerEveryHours: 70,    // +1 de puissance d'attaque toutes les 70 heures gagnees (+1 par ville)
+    startAutoDone: 30,      // taches automatisees avant l'introduction de la securite (Noah offert, premiers ennemis)
     powerMax: 9,
     windowSec: 20,          // temps pour decider ; sans decision, c'est l'option par defaut (la pire)
     // feeMin : cout minimal x puissance ; feeSec : ou secondes de revenu des clients (le plus grand des deux)
@@ -305,6 +300,34 @@ export const CONFIG = {
       leak:       { label: "Fuite de données", weight: 2, fallback: "hush", measure: "encrypt", feeMin: 80, feeSec: 40, warnCred: -4, hushRisk: 0.5, scandalCred: -15, scandalFineMult: 2,
         intro: "Des données de tes clients ont fuité. Que fais-tu ?" },
     },
+  },
+
+  // --- Ennemis : plus tu gagnes d'argent, plus il y en a et plus ils sont forts ---
+  // chaleur = log10(1 + argent gagne dans l'agence / moneyScale). Noah les traque et les detruit un par un.
+  enemies: {
+    firstSpawnSec: 40,
+    spawnEverySec: 120,     // delai moyen entre deux arrivees, divise par (1 + spawnPerHeat x chaleur)
+    spawnPerHeat: 0.5,
+    moneyScale: 200,
+    capBase: 1, capPerHeat: 1, capMax: 8,        // ennemis actifs au maximum : capBase + capPerHeat x chaleur
+    heatPerLevel: 1.2,      // niveau maximum d'un nouvel ennemi : 1 + chaleur / heatPerLevel (jusqu'a 5)
+    levelBias: 1.5,         // > 1 : les niveaux bas sont plus frequents
+    hpBase: 60,             // points de traque pour un niveau 1 ; x niveau^hpPow x style
+    hpPow: 1.4,
+    attackEverySec: 100,    // delai moyen entre deux attaques d'un ennemi ; / (1 + attackPerLevel x (niveau - 1)) / style
+    attackPerLevel: 0.15,
+    powerPerLevel: 2,       // puissance d'une attaque = (1 + powerPerLevel x (niveau - 1)) x style + ville
+    favouriteChance: 0.75,  // part des attaques de sa sorte favorite
+    bountyMin: 40,          // butin a la destruction : le plus grand de bountyMin x niveau et (revenu/s x bountySec x niveau)
+    bountySec: 20,
+    levels: ["Script kiddie", "Hacker isolé", "Groupe organisé", "Mafia du web", "Cyber-armée"],
+    styles: {
+      spammer:   { label: "Spammeur",     desc: "Attaque très souvent, mais des attaques faibles.",   rate: 2.5, power: 0.5, hp: 0.8 },
+      sniper:    { label: "Sniper",       desc: "Attaque rarement, mais très fort.",                  rate: 0.4, power: 2,   hp: 1.2 },
+      balanced:  { label: "Opportuniste", desc: "Ni lent ni rapide, ni faible ni fort.",              rate: 1,   power: 1,   hp: 1 },
+      entrenched:{ label: "Retranché",    desc: "Très long à détruire : il a le temps de t'embêter.", rate: 0.9, power: 1,   hp: 2.2 },
+    },
+    names: ["Phantom", "Shadow", "Null", "Zero", "Ghost", "Cipher", "Void", "Rogue", "Viper", "Raven", "Glitch", "Cobra", "Spectre", "Onyx"],
   },
 
   // Faux mails du phishing : un piege + des mails normaux
@@ -438,8 +461,7 @@ export const CONFIG = {
     { id: "dir_yanis", when: (s) => s.flags.hours && s.stats.autoDone >= 6, who: "yanis", title: "Yanis peut être recruté", text: "Avec moi dans l'équipe, tu peux monter tes automatisations au niveau 5 et plus, et elles vont plus vite. Tous les 5 niveaux, je multiplie par 2 les heures que tu gagnes." },
     { id: "dir_jadd", when: (s) => s.flags.stress && s.stats.clientsSigned >= 2 && s.stats.moneyEarned >= 400, who: "jadd", title: "Jadd peut être recruté", text: "Je guette la fenêtre. Dès que quelque chose passe, je l'ouvre, et il se passe un truc : parfois une bonne surprise, parfois moins. Plus je monte de niveau, plus je tombe au bon moment." },
     { id: "office",   when: (s) => s.staff.length >= CONFIG.office.levels[Math.min(s.office, CONFIG.office.levels.length - 1)].staff && s.staff.length > 0, who: "nahel", title: "Ton bureau est plein", text: "Tu ne peux pas embaucher plus de monde que ton bureau n'a de places. Améliore le bureau dans l'onglet Équipe : il change aussi d'aspect en haut de l'écran." },
-    { id: "dir_noah", when: (s) => s.stats.autoDone >= CONFIG.attacks.startAutoDone, who: "noah", title: "Noah peut être recruté", text: "Des cyberattaques vont viser tes automatisations : phishing, DDoS, ransomware, fuites de données. Avec moi dans l'équipe, elles arrivent moins souvent et j'en bloque une partie. Celles qui passent, c'est à toi de décider comment réagir." },
-    { id: "security", when: (s) => s.flags.dir_noah, who: "noah", tab: "security", title: "Nouvel onglet : Sécurité", text: "Ton score de sécurité monte avec chaque mesure achetée. Les gros clients en exigent un : sans score suffisant, ils ne se présentent pas. Chaque mesure te protège aussi contre une attaque précise." },
+    { id: "security", when: (s) => s.stats.autoDone >= CONFIG.attacks.startAutoDone, who: "noah", tab: "security", title: "Nouvel onglet : Sécurité", text: "Plus tu gagnes d'argent, plus des ennemis voudront t'attaquer : phishing, DDoS, ransomware, fuites de données. Je suis déjà dans l'équipe : je traque ces ennemis un par un et chaque ennemi détruit te rapporte de l'argent. Tu choisis qui je vise en priorité. Les mesures de sécurité te protègent en attendant, et les gros clients exigent un score." },
     { id: "agency",   when: (s) => s.hoursRun >= 120, who: "nahel", tab: "agency", title: "Nouvel onglet : Agences", text: "Tu peux remettre ton agence à zéro pour gagner des points, à dépenser dans une boutique de bonus permanents. Tu peux aussi débloquer d'autres agences, très chères, qui tournent en parallèle de la tienne." },
     { id: "success",  when: (s) => Object.keys(s.achievements).length >= 3, tab: "success", who: "nahel", title: "Nouvel onglet : Succès", text: "Tu débloques des succès en jouant. Chacun donne un petit bonus : de l'argent ou des gains permanents." },
     { id: "devis",    when: (s) => s.city >= 1, who: "nahel", title: "Nouvelle tâche : le devis", text: "Au Mans, il y a des devis à valider. Additionne les lignes et tape le bon total." },
