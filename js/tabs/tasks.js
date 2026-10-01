@@ -3,7 +3,7 @@ import { CONFIG } from "../config.js";
 import { state } from "../state.js";
 import { sfx } from "../audio.js";
 import { icon } from "../icons.js";
-import { completeTask, mistake, holdMs } from "../tasks.js";
+import { advanceTask, mistake, holdMs } from "../tasks.js";
 import { findClient } from "../clients.js";
 import { activeTypes, auto, status } from "../workflows.js";
 
@@ -22,8 +22,15 @@ const byId = (id) => state.queue.find((t) => t.id === id);
 
 // ---------- Fin de tache + gains affiches ----------
 function finish(t, node) {
-  const gain = completeTask(t.id);
+  const gain = advanceTask(t.id);
   if (!gain) return;
+  if (gain.step) {                       // tache difficile : il reste des etapes
+    sfx.ok();
+    const f = el("div", "float step", `Étape ${gain.step} faite`);
+    fx.append(f); setTimeout(() => f.remove(), 900);
+    stageId = null;                      // reconstruit avec les nouvelles donnees
+    return;
+  }
   sfx.coin();
   const i = state.queue.length ? 0 : -1;
   focusId = i >= 0 ? state.queue[0].id : null;
@@ -156,7 +163,7 @@ function buildStage(t) {
   }
   const cfg = CONFIG.tasks[t.type];
   stage.append(
-    el("div", "stitle", `<span class="t-${t.type}">${icon(t.type, 20)}</span><span>${cfg.label}</span>${t.d > 1 ? `<span class="dpill">Difficulté ${t.d}</span>` : ""}`),
+    el("div", "stitle", `<span class="t-${t.type}">${icon(t.type, 20)}</span><span>${cfg.label}</span>${t.d > 1 ? `<span class="dpill">Difficulté ${t.d}${t.steps > 1 ? ` · étape ${(t.step || 0) + 1}/${t.steps}` : ""}</span>` : ""}`),
     el("p", "shint", t.client != null && findClient(t.client) ? `Pour ${findClient(t.client).name}. ${HINT[cfg.gesture]}` : HINT[cfg.gesture]),
     BUILD[cfg.gesture](t)
   );

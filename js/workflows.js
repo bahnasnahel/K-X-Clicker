@@ -7,7 +7,7 @@ import { emit } from "./events.js";
 import { sfx } from "./audio.js";
 import { toast } from "./toast.js";
 import { clamp } from "./util.js";
-import { makeTask, enqueue } from "./taskdata.js";
+import { makeTask, enqueue, passes } from "./taskdata.js";
 
 const A = CONFIG.auto;
 
@@ -110,8 +110,9 @@ function tick(dt) {
       if (t.type === type && canHandle(type, t.d)) { state.queue.splice(i, 1); w.backlog.push({ id: t.id, type, client: t.client, d: t.d || 1, born: t.born }); }
     }
     if (now < w.crashedUntil || now < w.pausedUntil) continue;
+    // chaque tache difficile demande plusieurs passes : plus c'est dur, plus c'est lent
     w.progress += rate(type) * dt;
-    while (w.progress >= 1 && w.backlog.length) { w.progress -= 1; processOne(type, w, w.backlog.shift()); }
+    while (w.backlog.length && w.progress >= passes(w.backlog[0].d)) { w.progress -= passes(w.backlog[0].d); processOne(type, w, w.backlog.shift()); }
     if (!w.backlog.length) w.progress = Math.min(w.progress, 1);
   }
   const s = state.stats;

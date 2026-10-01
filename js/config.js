@@ -10,7 +10,7 @@ export const CONFIG = {
   slogan: "Reprenez le temps que vos processus vous prennent.",
 
   // --- Sauvegarde ---
-  save: { key: "kx-clicker-save", version: 4, intervalMs: 10000 },
+  save: { key: "kx-clicker-save", version: 5, intervalMs: 10000 },
 
   // --- Boucle ---
   loop: { stepMs: 100, maxCatchUpMs: 1000 },
@@ -25,11 +25,11 @@ export const CONFIG = {
   // --- Bureau : niveaux, nombre d'employes maximum, cout (EUR). Le bureau change aussi dans l'image du haut. ---
   office: {
     levels: [
-      { name: "Petit bureau",   staff: 2,  cost: 0 },
-      { name: "Bureau partagé", staff: 4,  cost: 200 },
-      { name: "Open space",     staff: 7,  cost: 800 },
-      { name: "Plateau complet", staff: 10, cost: 2500 },
-      { name: "Siège de K'X",   staff: 14, cost: 8000 },
+      { name: "Petit bureau",   staff: 3,  cost: 0 },
+      { name: "Bureau partagé", staff: 5,  cost: 300 },
+      { name: "Open space",     staff: 8,  cost: 1200 },
+      { name: "Plateau complet", staff: 12, cost: 3800 },
+      { name: "Siège de K'X",   staff: 16, cost: 12000 },
     ],
     cityCostBonus: 0.6,         // +60 % de cout par ville
   },
@@ -59,12 +59,17 @@ export const CONFIG = {
     devis:   { label: "Devis à valider",         gesture: "choice", city: 1, euro: 14, hours: 1.5, weight: 0.6 },
     contrat: { label: "Contrat à signer",        gesture: "hold",   city: 2, euro: 22, hours: 2.0, weight: 0.6, holdMs: 1400 },
   },
-  difficultyBonus: 0.25,
+  difficultyBonus: 0.4,         // +40 % de gains par point de difficulte au-dessus de 1
+  // Les taches deviennent de plus en plus dures avec les heures gagnees (et les villes).
+  // Une tache de difficulte D demande 1 + (D-1)/passesEvery etapes a la main,
+  // et une automatisation doit "passer" autant de fois dessus (donc plus lent). Il faut aussi un niveau >= D.
+  difficulty: { hoursPerStep: 120, max: 8, perCity: 1, passesEvery: 2, slowArrival: 0.3 },   // slowArrival : les taches arrivent moins vite quand elles sont plus dures (+30 % de delai par point)
 
   queue: {
     capacity: 8,           // au-dela, le stress monte
     hardCapMult: 2,        // la file n'accepte plus de tache a capacity x 2
     baseSpawnEverySec: 4,  // taches "maison" (sans client), delai moyen
+    baseWhileBelow: 5,     // les taches "maison" n'arrivent que si la boite en contient moins que ca (la pression vient des clients)
     refillBelow: 2,        // si la boite a moins de taches que ca, la suivante arrive en 1,5 s maximum
     refillSec: 1.5,
     startTasks: ["relance", "relance"],
@@ -106,20 +111,20 @@ export const CONFIG = {
   // --- Publicite : pour trouver des clients et des employes ---
   ads: {
     client: {
-      cost: 35, perClient: 0.2, cityBonus: 0.6,   // cout = cost x (1 + 0,2 x clients) x (1 + 0,6 x ville)
+      cost: 50, perClient: 0.2, cityBonus: 0.6,   // cout = cost x (1 + 0,2 x clients) x (1 + 0,6 x ville)
       durationSec: 14,
       firstDurationSec: 5,      // la toute premiere campagne est rapide
-      offers: [1, 2],           // demandes obtenues (+1 si credibilite >= 60)
+      offers: [2, 4],           // demandes obtenues (+1 si credibilite >= 60)
       bonusCred: 60,
-      maxPending: 4,            // demandes en attente maximum
+      maxPending: 6,            // demandes en attente maximum
       firstFree: true,          // la toute premiere campagne est offerte
     },
     recruit: {
-      cost: 90, cityBonus: 0.6,
+      cost: 130, cityBonus: 0.6,
       durationSec: 20,
-      candidates: [2, 3],       // profils proposes (+1 si credibilite >= 60)
+      candidates: [3, 5],       // profils proposes (+1 si credibilite >= 60)
       bonusCred: 60,
-      maxPending: 4,
+      maxPending: 6,
       // credibilite minimale pour voir des profils de niveau 1, 2, 3, 4, 5
       tierCred: [0, 20, 40, 60, 80],
     },
@@ -129,13 +134,13 @@ export const CONFIG = {
   // Niveau 1 s'achete en EUR, les niveaux suivants en heures gagnees.
   // Une tache de difficulte D ne peut etre automatisee que si le niveau est >= D.
   auto: {
-    maxLevel: 8,
-    levelNames: ["", "Macro simple", "Script planifié", "Connecteur", "Scénario n8n", "Agent IA", "Agent IA avancé", "Agent autonome", "Système expert"],
+    maxLevel: 10,
+    levelNames: ["", "Macro simple", "Script planifié", "Connecteur", "Scénario n8n", "Agent IA", "Agent IA avancé", "Agent autonome", "Orchestrateur", "Système expert", "Intelligence maison"],
     baseRate: 0.06,             // taches/s au niveau 1
     rateGrowth: 1.65,           // x par niveau
-    installCost: { relance: 40, facture: 60, excel: 120, rapport: 200, devis: 350, contrat: 600 },   // EUR
+    installCost: { relance: 60, facture: 90, excel: 180, rapport: 300, devis: 520, contrat: 900 },   // EUR
     hoursBase: 5,               // cout en heures du niveau 2
-    hoursGrowth: 2.2,           // x par niveau
+    hoursGrowth: 2.0,           // x par niveau
     hoursMult: { relance: 0.8, facture: 1, excel: 1.4, rapport: 2, devis: 3, contrat: 4 },
     installSec: 6,              // duree d'installation du niveau 1 (pendant ce temps : rien ne change)
     installGrowth: 1.6,         // x par niveau
@@ -169,13 +174,19 @@ export const CONFIG = {
     serviceGain: 0.4,           // (service - 0.7) x ceci, par seconde
   },
 
-  // taille des clients : plus gros = paye plus, envoie plus de taches, demande plus de temps et de competence
+  // PALIERS de clients (rangs) : chaque palier est un enorme saut en paiement, en temps demande et en competence.
+  // Dans un meme palier, chaque client a un "profil" (spread) : certains demandent plus et rapportent plus.
+  // minMoney : argent gagne dans l'agence ; minCred : credibilite minimale pour qu'ils se presentent.
   sizes: {
-    petit: { label: "Petit", pay: 0.15, taskEverySec: 14, time: 6,  skill: [1, 1], minMoney: 0 },
-    moyen: { label: "Moyen", pay: 0.45, taskEverySec: 9,  time: 12, skill: [2, 3], minMoney: 300 },
-    gros:  { label: "Gros",  pay: 1.2,  taskEverySec: 5,  time: 22, skill: [4, 5], minMoney: 1500 },
+    artisan: { label: "Artisan",      pay: 0.3, taskEverySec: 14, time: 6,   skill: [1, 1],  minMoney: 0,     minCred: 0,  weight: 1 },
+    tpe:     { label: "TPE",          pay: 1.4, taskEverySec: 8,  time: 16,  skill: [2, 3],  minMoney: 500,   minCred: 25, weight: 0.9 },
+    pme:     { label: "PME",          pay: 6,   taskEverySec: 5,  time: 38,  skill: [4, 5],  minMoney: 3000,  minCred: 45, weight: 0.6 },
+    eti:     { label: "ETI",          pay: 26,  taskEverySec: 3,  time: 80,  skill: [6, 7],  minMoney: 15000, minCred: 65, weight: 0.35 },
+    groupe:  { label: "Grand groupe", pay: 110, taskEverySec: 2,  time: 160, skill: [8, 10], minMoney: 60000, minCred: 80, weight: 0.2 },
   },
-  cityNeedBonus: { time: 0.1, skill: 1 },    // par ville : +10 % de temps, +1 niveau demande
+  profileSpread: [0.65, 1.6],   // multiplicateur de profil : temps x m, paiement x m^1.4, competence +/- 1 aux extremes
+  higherTierDamp: 0.6,          // chaque palier plus haut deja disponible reduit la part des clients de rang inferieur
+  cityNeedBonus: { time: 0.1, skill: 0 },    // par ville : +10 % de temps demande
 
   sectors: {
     boulangerie: { label: "Boulangerie",        city: 0, minMoney: 0,    tasks: ["facture", "relance"], names: ["Boulangerie Martin", "Le Fournil d'Anna", "Pains & Co", "Maison Gaudin"] },
@@ -231,9 +242,9 @@ export const CONFIG = {
       recruit: 250, upgrade: { base: 200, growth: 1.8 }, maxLevel: 10,
       eventEverySec: [35, 70], goodBase: 0.3, goodPerLevel: 0.065, goodMax: 0.95 },
     noah: { name: "Noah", role: "Cybersécurité",
-      desc: "Bloque automatiquement une partie des attaques. Chaque niveau : +10 % de blocage.",
+      desc: "Il défend ton système : sa défense affronte la puissance de chaque attaque et en bloque une grande partie. Il réduit aussi le nombre de taps qu'il te reste à faire quand une attaque passe. Sans lui, tu es presque sans défense.",
       recruit: 400, upgrade: { base: 350, growth: 1.8 }, maxLevel: 10,
-      blockBase: 0.3, blockPerLevel: 0.1, blockMax: 0.9 },
+      defenseBase: 1, defensePerLevel: 1.2, tapReducePerLevel: 0.05, tapReduceMin: 0.5 },
   },
 
   // --- Evenements de la fenetre de Jadd ---
@@ -259,16 +270,21 @@ export const CONFIG = {
   // --- Attaques (visent un type de tache automatise) ---
   attacks: {
     startAutoDone: 30,      // taches automatisees avant la premiere attaque (et Noah recrutable)
-    everySec: 110,
-    tapsToRepel: 4,
+    everySec: 100,          // delai moyen ; divise par (1 + frequencyPerPower x puissance)
+    frequencyPerPower: 0.12,
+    powerEveryHours: 70,    // +1 de puissance d'attaque toutes les 70 heures gagnees (+1 par ville)
+    powerMax: 9,
+    tapsBase: 4,            // taps pour repousser une attaque de puissance 1...
+    tapsPerPower: 2,        // ...+2 par point de puissance (reduits par Noah)
     windowSec: 9,           // temps pour repousser
     pauseSec: 25,           // pause de l'automatisation si l'attaque reussit
+    theftPct: 0.04,         // part de l'argent volee quand une attaque reussit (x puissance, max 40 %)
   },
 
   // --- Prestige : ouvrir une nouvelle agence ---
   prestige: {
     cities: ["Angoulême", "Le Mans", "Paris"],
-    thresholds: [360, 500, 750],  // heures gagnees (automatisation) pour ouvrir l'agence suivante
+    thresholds: [650, 900, 1300],  // heures gagnees (automatisation) pour ouvrir l'agence suivante
     repPerHours: 150,             // reputation gagnee = heures / ce nombre
     repBonus: 0.08,               // +10 % de gains par point de reputation
     repLargeBoost: 0.15,          // poids des gros clients +15 % par point
@@ -330,12 +346,13 @@ export const CONFIG = {
     { id: "clients",  tasks: 18, when: (s) => s.stats.tasksDone >= 18 && s.stats.moneyEarned >= 50, who: "nahel", tab: "clients", title: "Nouvel onglet : Clients", text: "Pour trouver des clients, il faut faire de la publicité. Lance une campagne : après quelques secondes, des clients se présentent. La première campagne est offerte. Signe un client : il paie un abonnement tant qu'il est bien servi." },
     { id: "team",     when: (s) => s.stats.clientsSigned >= 1, who: "nahel", tab: "team", title: "Nouvel onglet : Équipe", text: "Chaque client demande du temps de travail et un niveau de compétence. Pour les servir, embauche du monde : lance une campagne de recrutement. Plus ta crédibilité est haute, plus les profils sont forts. Attention, ton bureau limite le nombre d'employés." },
     { id: "workflows", when: (s) => s.stats.moneyEarned >= 160 && s.stats.clientsSigned >= 1, who: "yanis", tab: "workflows", title: "Nouvel onglet : Workflows", text: "On peut automatiser une tâche répétitive. Installe l'automatisation d'un type de tâche : elle se met en place après un délai, puis traite ces tâches toute seule. Tu peux la monter de niveau pour aller plus vite et gérer les tâches plus difficiles." },
+    { id: "difficulty", when: (s) => s.hoursRun >= CONFIG.difficulty.hoursPerStep && s.flags.workflows, who: "yanis", title: "Les tâches deviennent plus dures", text: "Plus tu avances, plus les tâches sont difficiles. À la main, une tâche difficile demande plusieurs étapes. Une automatisation doit passer plusieurs fois dessus, donc elle est plus lente, et son niveau doit être au moins égal à la difficulté, sinon elle ne la traite pas. Il faudra monter tes automatisations." },
     { id: "hours",    when: (s) => s.stats.autoDone >= 1, who: "yanis", title: "Nouveau : les heures gagnées", text: "Chaque tâche traitée automatiquement te fait gagner des heures. À la main, tu gagnes seulement de l'argent. Dépense tes heures pour monter tes automatisations. Leur total te rapproche aussi d'une nouvelle agence." },
     { id: "rapport",  tasks: 40, when: (s) => s.stats.tasksDone >= 40, who: "nahel", title: "Nouvelle tâche : le rapport", text: "Des rapports à rédiger : maintiens ton doigt appuyé jusqu'à ce que la barre soit pleine. Ça rapporte bien." },
     { id: "dir_yanis", when: (s) => s.flags.hours && s.stats.autoDone >= 6, who: "yanis", title: "Yanis peut être recruté", text: "Avec moi dans l'équipe, tu peux monter tes automatisations au niveau 5 et plus, et elles vont plus vite. Tous les 5 niveaux, je multiplie par 1,5 les heures que tu gagnes." },
     { id: "dir_jadd", when: (s) => s.flags.stress && s.stats.clientsSigned >= 2 && s.stats.moneyEarned >= 400, who: "jadd", title: "Jadd peut être recruté", text: "Je guette la fenêtre. Dès que quelque chose passe, je l'ouvre, et il se passe un truc : parfois une bonne surprise, parfois moins. Plus je monte de niveau, plus je tombe au bon moment." },
     { id: "office",   when: (s) => s.staff.length >= CONFIG.office.levels[Math.min(s.office, CONFIG.office.levels.length - 1)].staff && s.staff.length > 0, who: "nahel", title: "Ton bureau est plein", text: "Tu ne peux pas embaucher plus de monde que ton bureau n'a de places. Améliore le bureau dans l'onglet Équipe : il change aussi d'aspect en haut de l'écran." },
-    { id: "dir_noah", when: (s) => s.stats.autoDone >= CONFIG.attacks.startAutoDone, who: "noah", title: "Noah peut être recruté", text: "Des attaques vont viser tes automatisations. Si tu les laisses passer, l'automatisation se met en pause. Je peux en bloquer une partie, et tu repousses le reste en tapant sur l'alerte." },
+    { id: "dir_noah", when: (s) => s.stats.autoDone >= CONFIG.attacks.startAutoDone, who: "noah", title: "Noah peut être recruté", text: "Des cyberattaques vont viser tes automatisations, et elles vont devenir de plus en plus puissantes. Sans moi, tu es presque sans défense : une attaque qui passe met l'automatisation en pause et te vole de l'argent. Avec moi, ma défense affronte chaque attaque, et il te reste moins de taps à faire pour les repousser." },
     { id: "agency",   when: (s) => s.hoursRun >= 120, who: "nahel", tab: "agency", title: "Nouvel onglet : Agence", text: "Quand tu auras gagné assez d'heures, tu pourras ouvrir K'X dans une nouvelle ville. Tu repars de zéro, mais avec de la réputation : des gains en plus et de plus gros clients." },
     { id: "success",  when: (s) => Object.keys(s.achievements).length >= 3, tab: "success", who: "nahel", title: "Nouvel onglet : Succès", text: "Tu débloques des succès en jouant. Chacun donne un petit bonus : de l'argent ou des gains permanents." },
     { id: "devis",    when: (s) => s.city >= 1, who: "nahel", title: "Nouvelle tâche : le devis", text: "Au Mans, il y a des devis à valider. Additionne les lignes et tape le bon total." },

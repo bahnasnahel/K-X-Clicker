@@ -39,7 +39,7 @@ const ACTIONS = [
   ["Stress à zéro", () => { state.stress = 0; }],
   ["Bureau au maximum", () => { state.office = CONFIG.office.levels.length - 1; }],
   ["Crédibilité à 100 %", () => { state.credibility = 100; }],
-  ["Lancer une attaque", () => { const t = Object.keys(state.auto).find((k) => state.auto[k].level > 0); if (t) state.attack = { type: t, hp: CONFIG.attacks.tapsToRepel, deadline: state.stats.playSeconds + CONFIG.attacks.windowSec }; else toast("Installe d'abord une automatisation."); }],
+  ["Lancer une attaque", () => { const t = Object.keys(state.auto).find((k) => state.auto[k].level > 0); if (t) state.attack = { type: t, hp: CONFIG.attacks.tapsBase, deadline: state.stats.playSeconds + CONFIG.attacks.windowSec, power: 1 }; else toast("Installe d'abord une automatisation."); }],
 ];
 
 export function openCheat() {

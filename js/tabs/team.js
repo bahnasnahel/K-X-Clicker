@@ -5,7 +5,7 @@ import { sfx } from "../audio.js";
 import { confirmDialog } from "../modal.js";
 import { portrait, activePerson } from "../bubbles.js";
 import { avatar } from "../avatar.js";
-import { recruit, upgrade, upgradeCost, isVisible, jaddTap, goodChance, noahBlock } from "../crew.js";
+import { recruit, upgrade, upgradeCost, isVisible, jaddTap, goodChance, noahDefense, blockChance, attackPower } from "../crew.js";
 import { staffList, nahelStat, candidates, hire, fire, maxStaff, officeMax, nextOffice, officeCost, upgradeOffice } from "../staff.js";
 import { recruitAdCost, canRecruitAd, launchRecruitAd, adRunning, adLeft, dismissCandidate, maxTier } from "../ads.js";
 
@@ -17,7 +17,7 @@ const effect = (id) => {
   if (!m.on) return "";
   if (id === "yanis") return `Niveau ${m.lvl} · automatisation +${pct(m.lvl * T.yanis.speedBonus)} % · heures x${yanisHoursMult().toString().replace(".", ",")}`;
   if (id === "jadd") return `Niveau ${m.lvl} · ${pct(goodChance())} % d'événements positifs`;
-  if (id === "noah") return `Niveau ${m.lvl} · blocage automatique ${pct(noahBlock())} %`;
+  if (id === "noah") return `Niveau ${m.lvl} · défense ${noahDefense().toFixed(1).replace(".", ",")} · bloque ${pct(blockChance())} % des attaques actuelles (puissance ${attackPower()})`;
 };
 const nextBonus = (id) => {           // prochain gros palier
   const every = id === "nahel" ? T.nahel.bigBoostEvery : id === "yanis" ? T.yanis.hoursEvery : 0;

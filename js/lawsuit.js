@@ -54,7 +54,7 @@ function tick(dt) {
   acc += dt;
   if (acc < L.checkEverySec) return;
   acc = 0;
-  if (open || state.stats.playSeconds < nextAt) return;
+  if (open || state.stats.playSeconds < nextAt || state.stats.moneyEarned < 600 || state.clients.length < 2) return;   // jamais pendant la decouverte
   if (state.credibility < L.below && state.clients.length && Math.random() < L.chance) trigger();
 }
 

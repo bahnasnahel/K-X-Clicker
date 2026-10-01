@@ -6,7 +6,7 @@ import { on, emit } from "./events.js";
 import { sfx } from "./audio.js";
 import { toast } from "./toast.js";
 import { clamp } from "./util.js";
-import { spawnTask, availableTypes } from "./tasks.js";
+import { spawnTask, availableTypes, arrivalFactor } from "./tasks.js";
 import { service, payroll, freeStaff, serviceFor } from "./staff.js";
 
 const C = CONFIG.clients, K = CONFIG.credibility;
@@ -30,21 +30,32 @@ export function makeOffer() {
   const taken = new Set([...state.clients, ...state.offers].map((x) => x.name));
   const free = sec.names.filter((n) => !taken.has(n));
   const name = free.length ? pick(free) : pick(sec.names) + " " + (1 + Math.floor(Math.random() * 9));
-  // taille : les gros clients arrivent avec l'argent, la reputation et les villes
+
+  // palier (rang) : ouvre avec l'argent gagne et la credibilite ; les rangs eleves sont favorises par reputation et villes
   const boost = 1 + state.reputation * CONFIG.prestige.repLargeBoost + state.city * 0.4;
-  const weights = Object.entries(CONFIG.sizes).map(([k, s]) => {
-    if (state.runMoney < s.minMoney) return [k, 0];
-    if (k === "gros" && state.credibility < K.noBigBelow) return [k, 0];
-    return [k, k === "petit" ? 1 : k === "moyen" ? 0.8 : 0.35 * boost];
+  const entries = Object.entries(CONFIG.sizes);
+  const avail = entries.filter(([, z]) => state.runMoney >= z.minMoney && state.credibility >= z.minCred);
+  const topIdx = Math.max(...avail.map(([k]) => entries.findIndex(([x]) => x === k)));
+  const weights = avail.map(([k, z]) => {
+    const idx = entries.findIndex(([x]) => x === k);
+    const higher = topIdx - idx;                                   // nombre de rangs plus hauts deja disponibles
+    return [k, z.weight * Math.pow(CONFIG.higherTierDamp, higher) * (idx >= 2 ? boost : 1)];
   });
   const total = weights.reduce((s, [, w]) => s + w, 0);
-  let r = Math.random() * total, size = "petit";
+  let r = Math.random() * total, size = weights[0][0];
   for (const [k, w] of weights) { if ((r -= w) < 0) { size = k; break; } }
   const sz = CONFIG.sizes[size], N = CONFIG.cityNeedBonus;
-  const skill = sz.skill[0] + Math.floor(Math.random() * (sz.skill[1] - sz.skill[0] + 1)) + state.city * N.skill;
-  const time = Math.round(sz.time * (1 + state.city * N.time) * (0.9 + Math.random() * 0.2));
-  const pay = +(sz.pay * (1 + 0.5 * state.city) * (0.85 + Math.random() * 0.3)).toFixed(2);
-  return { id: state.nextClientId++, sector: sid, name, size, pay, every: sz.taskEverySec, types: sec.tasks, need: { time, skill } };
+
+  // profil dans le palier : certains demandent plus et rapportent plus
+  const [lo, hi] = CONFIG.profileSpread;
+  let m = lo + Math.random() * (hi - lo);
+  if (state.stats.clientsSigned === 0) m = Math.min(m, 1);    // le tout premier client est facile a servir
+  let skill = sz.skill[0] + Math.floor(Math.random() * (sz.skill[1] - sz.skill[0] + 1));
+  if (m > 1.3) skill += 1; else if (m < 0.8) skill -= 1;
+  skill = Math.max(1, Math.min(10, skill + state.city * N.skill));
+  const time = Math.max(2, Math.round(sz.time * m * (1 + state.city * N.time)));
+  const pay = +(sz.pay * Math.pow(m, 1.4) * (1 + 0.5 * state.city)).toFixed(2);
+  return { id: state.nextClientId++, sector: sid, name, size, pay, every: sz.taskEverySec, types: sec.tasks, need: { time, skill }, profile: +m.toFixed(2) };
 }
 
 export function signOffer(id) {
@@ -80,7 +91,7 @@ function tick(dt) {
     if (c.nextTask <= 0) {
       const ok = c.types.filter((t) => types.includes(t));
       if (ok.length) spawnTask(pick(ok), c.id, c.need.skill);
-      c.nextTask = c.every * (0.75 + Math.random() * 0.5);
+      c.nextTask = c.every * arrivalFactor() * (0.75 + Math.random() * 0.5);
     }
     let d = (sv - 0.7) * C.serviceGain;
     if (state.stress >= CONFIG.stress.max - 0.01) d += C.stressMaxPerSec;

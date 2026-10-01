@@ -5,7 +5,7 @@ import { addSystem } from "./loop.js";
 import { emit, on } from "./events.js";
 import { sfx } from "./audio.js";
 import { clamp } from "./util.js";
-import { makeTask, enqueue } from "./taskdata.js";
+import { makeTask, enqueue, nextStep } from "./taskdata.js";
 import { tryAutomate, diffMult } from "./workflows.js";
 
 let spawnTimer = 0;
@@ -32,11 +32,29 @@ function pickType() {
   return types.find((k) => (r -= CONFIG.tasks[k].weight) < 0) || types[0];
 }
 
+// Difficulte des taches "maison" : monte avec les heures gagnees dans l'agence et avec les villes.
+export function baseDifficulty() {
+  const D = CONFIG.difficulty;
+  return Math.min(D.max, 1 + Math.floor(state.hoursRun / D.hoursPerStep) + state.city * D.perCity);
+}
+
+// Les taches plus dures arrivent moins vite.
+export const arrivalFactor = () => 1 + CONFIG.difficulty.slowArrival * (baseDifficulty() - 1);
+
 // Cree une tache : un workflow la prend ou elle rejoint la file manuelle.
-export function spawnTask(type, client = null, d = 1) {
-  const t = makeTask(type || pickType(), client, d);
+export function spawnTask(type, client = null, d = null) {
+  const t = makeTask(type || pickType(), client, d == null ? baseDifficulty() : d);
   if (tryAutomate(t)) return;
   if (!enqueue(t) && client) emit("taskLost", t);
+}
+
+// Valide une etape d'une tache a la main. Retourne les gains quand la derniere etape est faite,
+// { step } si il reste des etapes, ou null si la tache n'existe plus.
+export function advanceTask(id) {
+  const t = state.queue.find((x) => x.id === id);
+  if (!t) return null;
+  if ((t.step || 0) + 1 < (t.steps || 1)) { nextStep(t); return { step: t.step }; }
+  return completeTask(id);
 }
 
 // Retourne les gains, ou null si la tache n'existe plus.
@@ -60,8 +78,8 @@ export function mistake() {
 function tick(dt) {
   spawnTimer -= dt;
   if (spawnTimer <= 0) {
-    spawnTask();
-    spawnTimer = CONFIG.queue.baseSpawnEverySec * (0.7 + Math.random() * 0.6);
+    if (state.queue.length < CONFIG.queue.baseWhileBelow) spawnTask();
+    spawnTimer = CONFIG.queue.baseSpawnEverySec * arrivalFactor() * (0.7 + Math.random() * 0.6);
   }
   // boite presque vide : on ne fait pas attendre le joueur
   if (state.queue.length < CONFIG.queue.refillBelow && spawnTimer > CONFIG.queue.refillSec) {

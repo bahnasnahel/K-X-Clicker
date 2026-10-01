@@ -311,3 +311,4 @@ body.notabs #bubbles,body.notabs .alert{bottom:calc(14px + env(safe-area-inset-b
 .tuto strong{display:block;font-size:15px;margin-bottom:4px}
 .client>.frame,.offer>.frame{width:52px;height:52px}
 .tuto{max-height:70dvh;overflow-y:auto}
+.float.step{font-size:10px;color:var(--l)}

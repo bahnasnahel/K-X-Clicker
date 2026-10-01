@@ -38,7 +38,17 @@ export function upgrade(id) {
 
 // ---- effets affiches ----
 export const goodChance = () => Math.min(T.jadd.goodMax, T.jadd.goodBase + T.jadd.goodPerLevel * state.team.jadd.lvl);
-export const noahBlock = () => state.team.noah.on ? Math.min(T.noah.blockMax, T.noah.blockBase + T.noah.blockPerLevel * state.team.noah.lvl) : 0;
+
+// ---- Attaques : la puissance monte avec la progression ; la defense de Noah l'affronte ----
+export const attackPower = () => Math.min(CONFIG.attacks.powerMax, 1 + Math.floor(state.hoursRun / CONFIG.attacks.powerEveryHours) + state.city);
+export const noahDefense = () => (state.team.noah.on ? T.noah.defenseBase + T.noah.defensePerLevel * state.team.noah.lvl : 0);
+export const blockChance = (p = attackPower()) => { const d = noahDefense(); return d ? d / (d + p) : 0; };
+export const noahBlock = () => blockChance();
+const tapsFor = (p) => {
+  const N = T.noah, A = CONFIG.attacks;
+  const red = state.team.noah.on ? Math.max(N.tapReduceMin, 1 - N.tapReducePerLevel * state.team.noah.lvl) : 1;
+  return Math.max(2, Math.round((A.tapsBase + A.tapsPerPower * (p - 1)) * red));
+};
 
 export function jaddTap() {
   const lines = CONFIG.jaddLines;
@@ -88,7 +98,8 @@ export function hitAttack() {
     state.attack = null;
     state.stats.attacksRepelled++;
     sfx.ok();
-    toast("Attaque repoussée.");
+    if (state.team.noah.on) bubble("noah", "Bien joué. On les a repoussés ensemble.");
+    else toast("Attaque repoussée.");
   } else sfx.tap();
 }
 
@@ -96,25 +107,29 @@ function attackTick() {
   const A = CONFIG.attacks, now = state.stats.playSeconds;
   if (state.attack) {
     if (now >= state.attack.deadline) {
-      const t = state.attack.type;
+      const t = state.attack.type, p = state.attack.power || 1;
       auto(t).pausedUntil = now + A.pauseSec;
+      const stolen = Math.round(state.money * Math.min(0.4, A.theftPct * p));
+      state.money -= stolen;
       state.attack = null;
       sfx.error();
-      toast(`Attaque réussie : « ${CONFIG.tasks[t].label} » est en pause.`);
+      toast(`Attaque réussie : « ${CONFIG.tasks[t].label} » est en pause${stolen ? `, ${stolen} EUR volés` : ""}.`);
+      if (state.team.noah.on) bubble("noah", "Celle-là était trop forte. Monte-moi de niveau.");
     }
     return;
   }
   if (state.stats.autoDone < A.startAutoDone || now < nextAttack) return;
   const targets = activeTypes();
   if (!targets.length) return;
-  nextAttack = now + A.everySec * (0.7 + Math.random() * 0.6);
+  const p = attackPower();
+  nextAttack = now + (A.everySec / (1 + A.frequencyPerPower * p)) * (0.7 + Math.random() * 0.6);
   const type = targets[Math.floor(Math.random() * targets.length)];
-  if (Math.random() < noahBlock()) {
+  if (Math.random() < blockChance(p)) {
     state.stats.attacksRepelled++;
-    bubble("noah", `Attaque bloquée sur « ${CONFIG.tasks[type].label} ».`);
+    bubble("noah", `Attaque de puissance ${p} bloquée sur « ${CONFIG.tasks[type].label} ».`);
     sfx.ok();
   } else {
-    state.attack = { type, hp: A.tapsToRepel, deadline: now + A.windowSec };
+    state.attack = { type, power: p, hp: tapsFor(p), deadline: now + A.windowSec };
     sfx.alert();
   }
 }

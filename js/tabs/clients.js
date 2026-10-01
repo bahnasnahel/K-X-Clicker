@@ -12,6 +12,7 @@ import { clientAdCost, isFirstAd, canClientAd, launchClientAd, adRunning, adLeft
 const types = (list) => list.map((t) => `<span class="t-${t}">${icon(t, 16)}</span>`).join("");
 const mood = (s) => (s >= 75 ? "Satisfait" : s >= 45 ? "Correct" : s >= 20 ? "Mécontent" : "Va résilier");
 const pct = (v) => Math.round(v * 100) + " %";
+const profil = (m) => (m >= 1.3 ? "exigeant, rapporte plus" : m <= 0.8 ? "modeste" : "standard");
 const servClass = (v) => (v >= 0.9 ? "good" : v >= 0.6 ? "mid" : "bad");
 
 function assignDialog(c) {
@@ -95,7 +96,7 @@ export default {
         const sec = CONFIG.sectors[o.sector], sv = previewService(o);
         const c = el("div", "card client offer");
         c.insertAdjacentHTML("beforeend", avatar({}, "", "c:" + o.id));
-        c.append(el("div", "cinfo", `<b>${o.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[o.size].label}</span><span class="ctasks">${types(o.types)}</span>
+        c.append(el("div", "cinfo", `<b>${o.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[o.size].label} · ${profil(o.profile || 1)}</span><span class="ctasks">${types(o.types)}</span>
           <span class="need">Besoin : ${o.need.time} h · niveau ${o.need.skill}</span><span class="serv ${servClass(sv)}">Service estimé avec ton équipe libre : ${pct(sv)}</span><span class="gold">${fmt2(o.pay)} EUR / s</span>`));
         const b = el("button", "btn small-btn", "Signer");
         b.onclick = () => signOffer(o.id);
@@ -109,7 +110,7 @@ export default {
         const sec = CONFIG.sectors[cl.sector];
         const who = assignedTo(cl.id);
         const c = el("div", "card client");
-        c.innerHTML = `${avatar({}, "", "c:" + cl.id)}<div class="cinfo"><b>${cl.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[cl.size].label}</span><span class="ctasks">${types(cl.types)}</span>
+        c.innerHTML = `${avatar({}, "", "c:" + cl.id)}<div class="cinfo"><b>${cl.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[cl.size].label} · ${profil(cl.profile || 1)}</span><span class="ctasks">${types(cl.types)}</span>
           <span class="need"></span><i class="bar svc"><b></b></i><span class="satline"></span>
           <span class="staffrow">${who.map((p) => `<span class="chip2 busy">${p.isNahel ? "Toi" : p.prenom} · niv ${p.skill} · ${p.time} h</span>`).join("") || "<em>Personne d'affecté</em>"}</span></div>`;
         const b = el("button", "btn small-btn", "Affecter");

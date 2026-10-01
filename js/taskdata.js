@@ -29,9 +29,18 @@ function makeData(type) {
   }
 }
 
+// Une tache de difficulte d demande plusieurs etapes a la main, et plusieurs "passes" a une automatisation.
+export const passes = (d) => 1 + Math.floor((Math.max(1, d || 1) - 1) / CONFIG.difficulty.passesEvery);
+
 // d = difficulte : une automatisation de niveau inferieur ne peut pas la traiter
 export function makeTask(type, client = null, d = 1) {
-  return { id: state.nextTaskId++, type, client, d, born: state.stats.playSeconds, data: makeData(type) };
+  return { id: state.nextTaskId++, type, client, d, step: 0, steps: passes(d), born: state.stats.playSeconds, data: makeData(type) };
+}
+
+// etape suivante d'une tache a la main : nouvelles donnees (nouvelle facture, nouveau message...)
+export function nextStep(task) {
+  task.step = (task.step || 0) + 1;
+  task.data = makeData(task.type);
 }
 
 export const queueLimit = () => CONFIG.queue.capacity * CONFIG.queue.hardCapMult;

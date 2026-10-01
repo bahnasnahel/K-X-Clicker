@@ -120,7 +120,7 @@ export function updateUI() {
   const a = state.attack;
   ui.alert.classList.toggle("hidden", !a);
   if (a) {
-    set("atk", ui.alert.querySelector(".atxt"), `${CONFIG.tasks[a.type].label} : tape pour repousser (${a.hp})`);
+    set("atk", ui.alert.querySelector(".atxt"), `${CONFIG.tasks[a.type].label} · puissance ${a.power || 1} : tape pour repousser (${a.hp})`);
     ui.alert.querySelector(".abar b").style.width = Math.max(0, ((a.deadline - state.stats.playSeconds) / CONFIG.attacks.windowSec) * 100) + "%";
   }
 }
