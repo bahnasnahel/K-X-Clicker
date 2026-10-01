@@ -1,6 +1,6 @@
 // Logique de la file de taches (sans interface).
 import { CONFIG } from "./config.js";
-import { state, earn } from "./state.js";
+import { state, earn, shopPct } from "./state.js";
 import { addSystem } from "./loop.js";
 import { emit, on } from "./events.js";
 import { sfx } from "./audio.js";
@@ -17,7 +17,7 @@ export function isUnlocked(type) {
 export const availableTypes = () => Object.keys(CONFIG.tasks).filter(isUnlocked);
 
 // Les gains de Nahel (+10 % par niveau, gros boost tous les 5) sont appliques dans state.earn.
-export const manualMult = () => 1;
+export const manualMult = () => shopPct("taskGain");
 
 // Duree du maintien d'un geste "hold", raccourcie par les ameliorations de Nahel.
 export function holdMs(type) {

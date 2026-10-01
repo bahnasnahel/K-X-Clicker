@@ -16,6 +16,7 @@ import { initStaff } from "./staff.js";
 import { initUnlocks } from "./unlocks.js";
 import { initLawsuit } from "./lawsuit.js";
 import { initAds } from "./ads.js";
+import { initAgencies } from "./agencies.js";
 
 await loadData();
 load();
@@ -25,6 +26,7 @@ initClients();
 initCrew();
 initStaff();
 initAds();
+initAgencies();
 initLawsuit();
 initUnlocks();
 initAchievements();

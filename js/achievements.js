@@ -26,8 +26,8 @@ const COND = {
   office_3:     (s) => s.office >= 3,
   hours_100:    (s) => s.lifetimeHours >= 100,
   rich:         (s) => s.stats.moneyEarned >= 10000,
-  agency_2:     (s) => s.city >= 1,
-  agency_3:     (s) => s.city >= 2,
+  agency_2:     (s) => s.cities[1].unlocked,
+  agency_3:     (s) => s.cities[2].unlocked,
 };
 
 export function rewardText(r) {

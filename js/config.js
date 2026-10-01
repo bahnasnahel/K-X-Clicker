@@ -10,7 +10,7 @@ export const CONFIG = {
   slogan: "Reprenez le temps que vos processus vous prennent.",
 
   // --- Sauvegarde ---
-  save: { key: "kx-clicker-save", version: 5, intervalMs: 10000 },
+  save: { key: "kx-clicker-save", version: 6, intervalMs: 10000 },
 
   // --- Boucle ---
   loop: { stepMs: 100, maxCatchUpMs: 1000 },
@@ -298,17 +298,45 @@ export const CONFIG = {
     theftPct: 0.04,         // part de l'argent volee quand une attaque reussit (x puissance, max 40 %)
   },
 
-  // --- Prestige : ouvrir une nouvelle agence ---
+  // --- Agences : une par ville, qui tournent EN PARALLELE ---
+  // L'argent est commun a toute l'entreprise. Une agence que tu ne diriges pas continue de produire
+  // (abonnements moins salaires, et heures de ses automatisations), a `passiveFactor` de son rythme.
   prestige: {
     cities: ["Angoulême", "Le Mans", "Paris"],
-    thresholds: [650, 900, 1300],  // heures gagnees (automatisation) pour ouvrir l'agence suivante
-    repPerHours: 150,             // reputation gagnee = heures / ce nombre
-    repBonus: 0.08,               // +10 % de gains par point de reputation
-    repLargeBoost: 0.15,          // poids des gros clients +15 % par point
+    prices: [0, 1000000, 50000000],   // prix en EUR pour debloquer chaque agence
+    passiveFactor: 0.6,               // rendement d'une agence que tu ne diriges pas
+    // Remise a zero de l'agence ou tu es : points = (heures gagnees dans cette agence / divisor) ^ power
+    pointsDivisor: 80,
+    pointsPower: 1.15,
     news: [
       "",
       "Le Mans ajoute le devis à valider et deux nouveaux secteurs : agences immobilières et cabinets d'architectes.",
       "Paris ajoute le contrat à signer et deux nouveaux secteurs : start-up SaaS et agences de communication.",
+    ],
+  },
+
+  // --- Boutique permanente (points gagnes en remettant une agence a zero) ---
+  // unit : eur | pct | lvl | count | pts ; per : effet par niveau ; cost : niveau n coute base x growth^n points
+  shop: {
+    groups: ["Départs", "Réductions", "Bonus", "Déblocages"],
+    items: [
+      { id: "startMoney",  group: 0, label: "Capital de départ",     desc: "Argent offert au début de chaque agence.",                 unit: "eur",   per: 250, max: 20, cost: [2, 1.3] },
+      { id: "startOffice", group: 0, label: "Bureau de départ",      desc: "Chaque agence démarre avec un bureau plus grand.",         unit: "lvl",   per: 1,   max: 4,  cost: [3, 2] },
+      { id: "freeAds",     group: 0, label: "Publicités offertes",   desc: "Campagnes de clients et de recrutement gratuites au début de chaque agence.", unit: "count", per: 1, max: 10, cost: [2, 1.3] },
+      { id: "startCred",   group: 0, label: "Crédibilité de départ", desc: "Tu démarres avec plus de crédibilité (de meilleurs profils, plus de clients).", unit: "pts", per: 4, max: 12, cost: [2, 1.3] },
+      { id: "startAuto",   group: 0, label: "Automatisations de départ", desc: "Les premiers types de tâches démarrent déjà automatisés (niveau 1).", unit: "count", per: 1, max: 6, cost: [4, 1.7] },
+      { id: "startDir",    group: 0, label: "Direction aguerrie",    desc: "Nahel et les directeurs démarrent à un niveau plus haut dans chaque agence.", unit: "lvl", per: 1, max: 20, cost: [3, 1.4] },
+      { id: "hireDiscount",  group: 1, label: "Embauches moins chères",       desc: "Réduction sur le coût d'embauche des employés.", unit: "pct", per: 6, max: 10, cost: [2, 1.4] },
+      { id: "adDiscount",    group: 1, label: "Publicités moins chères",      desc: "Réduction sur toutes les campagnes de publicité.", unit: "pct", per: 6, max: 10, cost: [2, 1.4] },
+      { id: "autoDiscount",  group: 1, label: "Automatisations moins chères", desc: "Réduction sur l'installation et l'amélioration des automatisations (euros et heures).", unit: "pct", per: 6, max: 10, cost: [2, 1.4] },
+      { id: "officeDiscount", group: 1, label: "Direction et bureau moins chers", desc: "Réduction sur les améliorations du bureau et des dirigeants.", unit: "pct", per: 6, max: 10, cost: [2, 1.4] },
+      { id: "autoSpeed",   group: 2, label: "Automatisations plus rapides", desc: "Vitesse de toutes les automatisations.",             unit: "pct", per: 10, max: 30, cost: [3, 1.3] },
+      { id: "hoursGain",   group: 2, label: "Heures gagnées",        desc: "Plus d'heures gagnées par l'automatisation.",              unit: "pct", per: 8,  max: 30, cost: [3, 1.3] },
+      { id: "clientPay",   group: 2, label: "Clients plus rentables", desc: "Les abonnements des clients rapportent plus.",            unit: "pct", per: 6,  max: 30, cost: [3, 1.3] },
+      { id: "taskGain",    group: 2, label: "Tâches mieux payées",   desc: "Gains d'argent des tâches faites à la main.",              unit: "pct", per: 8,  max: 30, cost: [2, 1.3] },
+      { id: "loyalty",     group: 2, label: "Clients fidèles",       desc: "La satisfaction des clients baisse moins vite.",            unit: "pct", per: 8,  max: 10, cost: [3, 1.4] },
+      { id: "tierCred",    group: 3, label: "Meilleurs profils plus tôt", desc: "Moins de crédibilité nécessaire pour attirer des profils d'un niveau plus haut.", unit: "pts", per: 4, max: 10, cost: [3, 1.5] },
+      { id: "clientRanks", group: 3, label: "Gros clients plus tôt", desc: "Les rangs de clients s'ouvrent avec moins d'argent et de crédibilité.", unit: "pct", per: 8, max: 10, cost: [3, 1.5] },
     ],
   },
 
@@ -332,8 +360,8 @@ export const CONFIG = {
     { id: "office_3",     label: "Plateau complet",       desc: "Améliorer le bureau jusqu'au plateau complet.", reward: { mult: 0.03 } },
     { id: "hours_100",    label: "100 heures gagnées",    desc: "Gagner 100 heures au total.",                  reward: { mult: 0.02 } },
     { id: "rich",         label: "Petite fortune",        desc: "Gagner 10 000 EUR au total.",                  reward: { mult: 0.03 } },
-    { id: "agency_2",     label: "Nouvelle agence",       desc: "Ouvrir l'agence du Mans.",                     reward: { mult: 0.05 } },
-    { id: "agency_3",     label: "Paris, enfin",          desc: "Ouvrir l'agence de Paris.",                    reward: { mult: 0.08 } },
+    { id: "agency_2",     label: "Nouvelle agence",       desc: "Débloquer l'agence du Mans.",                     reward: { mult: 0.05 } },
+    { id: "agency_3",     label: "Paris, enfin",          desc: "Débloquer l'agence de Paris.",                    reward: { mult: 0.08 } },
   ],
   zeroBugSec: 300,
 
@@ -370,7 +398,7 @@ export const CONFIG = {
     { id: "dir_jadd", when: (s) => s.flags.stress && s.stats.clientsSigned >= 2 && s.stats.moneyEarned >= 400, who: "jadd", title: "Jadd peut être recruté", text: "Je guette la fenêtre. Dès que quelque chose passe, je l'ouvre, et il se passe un truc : parfois une bonne surprise, parfois moins. Plus je monte de niveau, plus je tombe au bon moment." },
     { id: "office",   when: (s) => s.staff.length >= CONFIG.office.levels[Math.min(s.office, CONFIG.office.levels.length - 1)].staff && s.staff.length > 0, who: "nahel", title: "Ton bureau est plein", text: "Tu ne peux pas embaucher plus de monde que ton bureau n'a de places. Améliore le bureau dans l'onglet Équipe : il change aussi d'aspect en haut de l'écran." },
     { id: "dir_noah", when: (s) => s.stats.autoDone >= CONFIG.attacks.startAutoDone, who: "noah", title: "Noah peut être recruté", text: "Des cyberattaques vont viser tes automatisations, et elles vont devenir de plus en plus puissantes. Sans moi, tu es presque sans défense : une attaque qui passe met l'automatisation en pause et te vole de l'argent. Avec moi, ma défense affronte chaque attaque, et il te reste moins de taps à faire pour les repousser." },
-    { id: "agency",   when: (s) => s.hoursRun >= 120, who: "nahel", tab: "agency", title: "Nouvel onglet : Agence", text: "Quand tu auras gagné assez d'heures, tu pourras ouvrir K'X dans une nouvelle ville. Tu repars de zéro, mais avec de la réputation : des gains en plus et de plus gros clients." },
+    { id: "agency",   when: (s) => s.hoursRun >= 120, who: "nahel", tab: "agency", title: "Nouvel onglet : Agences", text: "Tu peux remettre ton agence à zéro pour gagner des points, à dépenser dans une boutique de bonus permanents. Tu peux aussi débloquer d'autres agences, très chères, qui tournent en parallèle de la tienne." },
     { id: "success",  when: (s) => Object.keys(s.achievements).length >= 3, tab: "success", who: "nahel", title: "Nouvel onglet : Succès", text: "Tu débloques des succès en jouant. Chacun donne un petit bonus : de l'argent ou des gains permanents." },
     { id: "devis",    when: (s) => s.city >= 1, who: "nahel", title: "Nouvelle tâche : le devis", text: "Au Mans, il y a des devis à valider. Additionne les lignes et tape le bon total." },
     { id: "contrat",  when: (s) => s.city >= 2, who: "nahel", title: "Nouvelle tâche : le contrat", text: "À Paris, des contrats à signer. Maintiens ton doigt un peu plus longtemps." },

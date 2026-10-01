@@ -19,9 +19,15 @@ export function checkOffline() {
   const O = CONFIG.offline;
   const away = (Date.now() - state.meta.lastActive) / 1000;
   state.meta.lastActive = Date.now();
-  if (away < O.minAwaySeconds || state.clients.length === 0) return;
+  if (away < O.minAwaySeconds) return;
   const counted = Math.min(away, O.capHours * 3600);
-  const euro = Math.max(0, incomePerSec() * O.rate - payroll()) * counted;   // abonnements a 50 %, moins les salaires
+  let euro = Math.max(0, incomePerSec() * O.rate - payroll()) * counted;   // abonnements a 50 %, moins les salaires
+  for (let i = 0; i < state.cities.length; i++) {                         // agences que tu ne diriges pas
+    const c = state.cities[i];
+    if (i === state.city || !c.data) continue;
+    const e = c.passive.euro * O.rate * counted, h = c.passive.hours * O.rate * counted;
+    euro += e; c.data.runMoney += e; c.data.hoursSaved += h; c.data.hoursRun += h; state.lifetimeHours += h;
+  }
   if (euro <= 0) return;
   state.money += euro;
   state.stats.moneyEarned += euro;
@@ -30,7 +36,7 @@ export function checkOffline() {
   const capped = away > O.capHours * 3600 ? `<p class="muted small">Plafond de ${O.capHours} h atteint.</p>` : "";
   infoDialog("Bon retour chez K'X",
     `<p>Tu étais absent ${duration(away)}.</p>
-     <p>Tes ${state.clients.length} client${state.clients.length > 1 ? "s" : ""} ont continué à payer, salaires déduits : <b class="gold">+${fmt(euro)} EUR</b></p>
+     <p>Tes clients et tes agences ont continué à produire, salaires déduits : <b class="gold">+${fmt(euro)} EUR</b></p>
      <p class="muted small">Hors ligne, tu touches ${Math.round(O.rate * 100)} % des abonnements.</p>${capped}`,
     "Reprendre");
 }

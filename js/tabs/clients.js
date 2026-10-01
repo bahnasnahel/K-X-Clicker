@@ -7,7 +7,7 @@ import { modal, infoDialog, confirmDialog } from "../modal.js";
 import { avatar } from "../avatar.js";
 import { signOffer, dropOffer, terminateClient, satRate, clientIncome, incomePerSec, previewService } from "../clients.js";
 import { staffList, assignedTo, timeGiven, skillGiven, service, assign, autoAssign, payroll } from "../staff.js";
-import { clientAdCost, isFirstAd, canClientAd, launchClientAd, adRunning, adLeft } from "../ads.js";
+import { clientAdCost, adIsFree, canClientAd, launchClientAd, adRunning, adLeft } from "../ads.js";
 
 const types = (list) => list.map((t) => `<span class="t-${t}">${icon(t, 16)}</span>`).join("");
 const mood = (s) => (s >= 75 ? "Satisfait" : s >= 45 ? "Correct" : s >= 20 ? "Mécontent" : "Va résilier");
@@ -76,7 +76,7 @@ export default {
 
       // publicite : la seule facon de trouver des clients
       const ad = el("div", "card adcard");
-      const free = isFirstAd();
+      const free = adIsFree("client");
       ad.innerHTML = `<div class="cinfo"><b>Publicité</b><span class="sdesc">Lance une campagne pour que des clients se présentent. Plus ta crédibilité est haute, plus il y en a.</span><i class="bar adbar"><b></b></i><span class="satline adline"></span></div>`;
       const abtn = el("button", "btn small-btn", free ? "Campagne<br><small>offerte</small>" : `Campagne<br><small>${fmt(clientAdCost())} EUR</small>`);
       abtn.disabled = !canClientAd();

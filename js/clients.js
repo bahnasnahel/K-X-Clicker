@@ -1,6 +1,6 @@
 // Clients : demandes, signature, abonnements, service rendu, satisfaction, credibilite.
 import { CONFIG } from "./config.js";
-import { state, earn, gainMult } from "./state.js";
+import { state, earn, gainMult, noteFlow, shopPct, shopDiscount } from "./state.js";
 import { addSystem } from "./loop.js";
 import { on, emit } from "./events.js";
 import { sfx } from "./audio.js";
@@ -14,7 +14,7 @@ const C = CONFIG.clients, K = CONFIG.credibility;
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export const payFactor = (sat) => (sat >= C.payFullAbove ? 1 : sat / C.payFullAbove);
-export const clientIncome = (c) => c.pay * payFactor(c.sat) * (0.5 + 0.5 * service(c)) * gainMult();
+export const clientIncome = (c) => c.pay * payFactor(c.sat) * (0.5 + 0.5 * service(c)) * gainMult() * shopPct("clientPay");
 export const incomePerSec = () => state.clients.reduce((s, c) => s + clientIncome(c), 0);
 export const findClient = (id) => state.clients.find((c) => c.id === id);
 
@@ -38,9 +38,10 @@ export function makeOffer() {
   if (!name) name = pick(sec.names) + " " + (1 + Math.floor(Math.random() * 9));
 
   // palier (rang) : ouvre avec l'argent gagne et la credibilite ; les rangs eleves sont favorises par reputation et villes
-  const boost = 1 + state.reputation * CONFIG.prestige.repLargeBoost + state.city * 0.4;
+  const boost = 1 + state.city * 0.4;
   const entries = Object.entries(CONFIG.sizes);
-  const avail = entries.filter(([, z]) => state.runMoney >= z.minMoney && state.credibility >= z.minCred);
+  const rk = state.shop.clientRanks || 0;                       // boutique : rangs plus tot
+  const avail = entries.filter(([, z]) => state.runMoney >= z.minMoney * shopDiscount("clientRanks") && state.credibility >= z.minCred - 3 * rk);
   const topIdx = Math.max(...avail.map(([k]) => entries.findIndex(([x]) => x === k)));
   const weights = avail.map(([k, z]) => {
     const idx = entries.findIndex(([x]) => x === k);
@@ -97,6 +98,8 @@ export function satRate(c) {
   else if (state.stress >= CONFIG.stress.highThreshold) parts.push({ v: C.stressHighPerSec, txt: "stress élevé" });
   const late = state.queue.filter((t) => t.client === c.id && now - t.born > CONFIG.queue.overdueSec).length;
   if (late) parts.push({ v: late * C.overduePerSec, txt: `${late} tâche${late > 1 ? "s" : ""} en retard` });
+  const keep = shopDiscount("loyalty");                          // boutique : la satisfaction baisse moins vite
+  for (const p of parts) if (p.v < 0) p.v *= keep;
   return { total: parts.reduce((a, p) => a + p.v, 0), parts };
 }
 
@@ -125,7 +128,8 @@ function tick(dt) {
       c.nextTask = c.every * arrivalFactor() * (0.75 + Math.random() * 0.5);
     }
     c.sat = clamp(c.sat + satRate(c).total * dt, 0, 100);
-    earn(c.pay * payFactor(c.sat) * (0.5 + 0.5 * sv) * dt, 0);
+    const got = earn(c.pay * payFactor(c.sat) * (0.5 + 0.5 * sv) * shopPct("clientPay") * dt, 0);
+    noteFlow(got.euro, 0);
     if (!c.happy && c.sat >= C.satisfied) { c.happy = true; state.stats.clientsSatisfied++; }
     if (c.sat <= 0) {
       sfx.error();

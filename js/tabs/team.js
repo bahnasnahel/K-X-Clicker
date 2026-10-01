@@ -6,7 +6,7 @@ import { confirmDialog } from "../modal.js";
 import { portrait, activePerson } from "../bubbles.js";
 import { avatar } from "../avatar.js";
 import { recruit, upgrade, upgradeCost, isVisible, jaddTap, goodChance, noahDefense, blockChance, attackPower } from "../crew.js";
-import { staffList, directorStat, candidates, hire, fire, maxStaff, officeMax, nextOffice, officeCost, upgradeOffice } from "../staff.js";
+import { staffList, directorStat, candidates, hire, fire, maxStaff, officeMax, nextOffice, officeCost, upgradeOffice, hireCost } from "../staff.js";
 import { recruitAdCost, canRecruitAd, launchRecruitAd, adRunning, adLeft, dismissCandidate, maxTier, nextTier } from "../ads.js";
 
 const T = CONFIG.team;
@@ -29,11 +29,11 @@ const nextBonus = (id) => {           // prochain gros palier
 
 export default {
   id: "team", label: "Équipe", icon: "team",
-  badge: () => candidates().some((e) => state.money >= e.hire) && state.staff.length < maxStaff(),
+  badge: () => candidates().some((e) => state.money >= hireCost(e)) && state.staff.length < maxStaff(),
   mount(root) {
     const sig = () => JSON.stringify([
       Object.keys(T).map((id) => [state.team[id].on, state.team[id].lvl, isVisible(id), state.money >= (state.team[id].on ? upgradeCost(id) : T[id].recruit)]),
-      state.staff, state.assign, state.clients.map((c) => c.id), state.candidates, candidates().map((e) => state.money >= e.hire),
+      state.staff, state.assign, state.clients.map((c) => c.id), state.candidates, candidates().map((e) => state.money >= hireCost(e)),
       state.city, state.office, state.money >= officeCost(), adRunning("recruit"), canRecruitAd(), canRecruitAd(true), recruitAdCost(), maxTier(),
     ]);
     this.cards = {};
@@ -92,7 +92,7 @@ export default {
         <span class="sdesc">Campagne ciblée : coûte ${T0.targetedMult} fois plus et cherche un niveau au-dessus.</span>
         <i class="bar adbar"><b></b></i><span class="satline adline"></span></div>`;
       const abtns = el("span", "btncol");
-      const ab = el("button", "btn small-btn", `Campagne<br><small>${fmt(recruitAdCost())} EUR</small>`);
+      const ab = el("button", "btn small-btn", `Campagne<br><small>${recruitAdCost() ? fmt(recruitAdCost()) + " EUR" : "offerte"}</small>`);
       ab.disabled = !canRecruitAd();
       ab.onclick = () => launchRecruitAd(false);
       const at = el("button", "btn small-btn ghost", `Ciblée<br><small>${fmt(recruitAdCost(true))} EUR</small>`);
@@ -113,8 +113,8 @@ export default {
         c.innerHTML = `${avatar(e, "", "e:" + e.id)}<span class="pt"><span class="nm">${e.name}</span><span class="rl">${e.titre} · profil ${e.tier}/5</span>
           <span class="fx">${e.time} h · niveau ${e.skill} · salaire ${fmt2(e.salary)} EUR/s</span></span>`;
         const col = el("span", "btncol");
-        const b = el("button", "btn small-btn", `Embaucher<br><small>${fmt(e.hire)} EUR</small>`);
-        b.disabled = state.money < e.hire || state.staff.length >= maxStaff();
+        const b = el("button", "btn small-btn", `Embaucher<br><small>${fmt(hireCost(e))} EUR</small>`);
+        b.disabled = state.money < hireCost(e) || state.staff.length >= maxStaff();
         b.onclick = () => hire(e.id);
         const no = el("button", "btn small-btn ghost", "Refuser");
         no.onclick = () => { dismissCandidate(e.id); sfx.tap(); };

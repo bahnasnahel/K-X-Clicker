@@ -1,6 +1,6 @@
 // Personnel : Nahel + employes (data/employees.json). Temps, competence, affectation aux clients, salaires.
 import { CONFIG } from "./config.js";
-import { state, staffCap, office } from "./state.js";
+import { state, staffCap, office, shopDiscount } from "./state.js";
 import { addSystem } from "./loop.js";
 import { on } from "./events.js";
 import { sfx } from "./audio.js";
@@ -146,12 +146,13 @@ export const refreshAssign = () => { if (state.autoAssign) autoAssign(); };
 
 // ---- embauche : les profils viennent des campagnes de recrutement ----
 export const isHired = (id) => state.staff.includes(id);
+export const hireCost = (e) => Math.max(5, Math.round(e.hire * shopDiscount("hireDiscount")));
 export const candidates = () => state.candidates.map((id) => getEmp(id)).filter(Boolean);
 
 export function hire(id) {
   const e = getEmp(id);
-  if (!e || isHired(id) || !state.candidates.includes(id) || state.money < e.hire || state.staff.length >= maxStaff()) return false;
-  state.money -= e.hire;
+  if (!e || isHired(id) || !state.candidates.includes(id) || state.money < hireCost(e) || state.staff.length >= maxStaff()) return false;
+  state.money -= hireCost(e);
   state.staff.push(id);
   state.candidates = state.candidates.filter((x) => x !== id);
   refreshAssign();
@@ -170,7 +171,7 @@ export function fire(id) {
 // ---- bureau : plus de places, et le dessin change ----
 export const officeMax = () => state.office >= O.levels.length - 1;
 export const nextOffice = () => (officeMax() ? null : O.levels[state.office + 1]);
-export const officeCost = () => (officeMax() ? 0 : Math.round(O.levels[state.office + 1].cost * (1 + O.cityCostBonus * state.city)));
+export const officeCost = () => (officeMax() ? 0 : Math.round(O.levels[state.office + 1].cost * (1 + O.cityCostBonus * state.city) * shopDiscount("officeDiscount")));
 export function upgradeOffice() {
   if (officeMax() || state.money < officeCost()) return false;
   state.money -= officeCost();

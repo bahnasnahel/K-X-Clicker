@@ -1,6 +1,6 @@
 // Publicite : campagnes pour trouver des clients et des employes.
 import { CONFIG } from "./config.js";
-import { state } from "./state.js";
+import { state, shopDiscount } from "./state.js";
 import { addSystem } from "./loop.js";
 import { on } from "./events.js";
 import { sfx } from "./audio.js";
@@ -14,22 +14,24 @@ const rnd = (r) => r[0] + Math.floor(Math.random() * (r[1] - r[0] + 1));
 
 // ---- campagne clients ----
 export const isFirstAd = () => A.client.firstFree && state.stats.clientsSigned === 0 && state.offers.length === 0 && !state.stats.adsLaunched;
+export const adIsFree = (which) => (which === "client" && isFirstAd()) || state.freeAds[which] > 0;     // premiere campagne ou campagnes de la boutique
 export function clientAdCost() {
-  if (isFirstAd()) return 0;
-  return Math.round(A.client.cost * (1 + A.client.perClient * state.clients.length) * (1 + A.client.cityBonus * state.city));
+  if (adIsFree("client")) return 0;
+  return Math.round(A.client.cost * (1 + A.client.perClient * state.clients.length) * (1 + A.client.cityBonus * state.city) * shopDiscount("adDiscount"));
 }
-export const recruitAdCost = (targeted = false) => Math.round(A.recruit.cost * (1 + A.recruit.cityBonus * state.city) * (targeted ? A.recruit.targetedMult : 1));
+export const recruitAdCost = (targeted = false) => (!targeted && adIsFree("recruit") ? 0 : Math.round(A.recruit.cost * (1 + A.recruit.cityBonus * state.city) * (targeted ? A.recruit.targetedMult : 1) * shopDiscount("adDiscount")));
 
 // niveau maximal des profils propose selon la credibilite
 export function maxTier() {
   let t = 1;
-  A.recruit.tierCred.forEach((c, i) => { if (state.credibility >= c) t = i + 1; });
+  const rb = 4 * (state.shop.tierCred || 0);          // boutique : meilleurs profils plus tot
+  A.recruit.tierCred.forEach((c, i) => { if (state.credibility >= c - rb) t = i + 1; });
   return t;
 }
 // prochain niveau de profil a debloquer : { tier, cred } ou null
 export function nextTier() {
   const t = maxTier();
-  return t < A.recruit.tierCred.length ? { tier: t + 1, cred: A.recruit.tierCred[t] } : null;
+  return t < A.recruit.tierCred.length ? { tier: t + 1, cred: A.recruit.tierCred[t] - 4 * (state.shop.tierCred || 0) } : null;
 }
 
 export const adLeft = (which) => (state.ads[which] ? Math.max(0, state.ads[which].end - state.stats.playSeconds) : 0);
@@ -41,8 +43,9 @@ const staffCapNow = () => CONFIG.office.levels[Math.min(state.office, CONFIG.off
 
 export function launchClientAd() {
   if (!canClientAd()) return false;
-  const first = isFirstAd();
-  state.money -= clientAdCost();
+  const first = isFirstAd(), cost = clientAdCost();
+  if (cost === 0 && !first && state.freeAds.client > 0) state.freeAds.client--;      // campagne offerte par la boutique
+  state.money -= cost;
   state.stats.adsLaunched = (state.stats.adsLaunched || 0) + 1;
   const dur = first ? A.client.firstDurationSec : A.client.durationSec;
   state.ads.client = { end: state.stats.playSeconds + dur, total: dur };
@@ -51,7 +54,9 @@ export function launchClientAd() {
 }
 export function launchRecruitAd(targeted = false) {
   if (!canRecruitAd(targeted)) return false;
-  state.money -= recruitAdCost(targeted);
+  const cost = recruitAdCost(targeted);
+  if (cost === 0 && !targeted && state.freeAds.recruit > 0) state.freeAds.recruit--;
+  state.money -= cost;
   state.ads.recruit = { end: state.stats.playSeconds + A.recruit.durationSec, targeted: !!targeted };
   sfx.ok();
   return true;

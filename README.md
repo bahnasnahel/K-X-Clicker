@@ -45,6 +45,6 @@ Ajoute `?debug` à l'adresse : `window.kx` donne accès à `state`, `CONFIG` et 
 - `js/clients.js` demandes, abonnements, service, crédibilité, `js/lawsuit.js` procès, `js/offline.js` gains hors ligne
 - `js/staff.js` employés, bureau, temps et compétence, affectation, salaires, `js/ads.js` publicité (clients et recrutement), `js/avatar.js` photos sans doublon, `js/data.js` chargement de `data/`
 - `js/unlocks.js` progression : onglets et contenus qui apparaissent au fur et à mesure, avec explication (jeu en pause) ; `js/tutorial.js` les bulles d'explication
-- `js/crew.js` directeurs, Jadd (événements de la fenêtre), attaques, `js/prestige.js` agences, `js/achievements.js` succès
+- `js/crew.js` directeurs, Jadd (événements de la fenêtre), attaques, `js/agencies.js` agences en parallèle et remise à zéro, `js/shop.js` boutique permanente, `js/achievements.js` succès
 - `js/render.js` bureau pixel (canvas), `js/ui.js` interface, `js/bubbles.js` + `js/tutorial.js` bulles avec photos, `js/audio.js` sons
 - `js/events.js` bus d'événements entre modules (ajouter une ville ou un événement ne demande pas de toucher aux autres)

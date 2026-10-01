@@ -1,6 +1,6 @@
 // Direction : recrutement, ameliorations, Jadd (fenetre et evenements), Noah (attaques).
 import { CONFIG } from "./config.js";
-import { state } from "./state.js";
+import { state, shopDiscount } from "./state.js";
 import { addSystem } from "./loop.js";
 import { on } from "./events.js";
 import { sfx } from "./audio.js";
@@ -15,12 +15,13 @@ import { deskFx } from "./render.js";
 const T = CONFIG.team;
 export const member = (id) => state.team[id];
 export const isVisible = (id) => id === "nahel" || !!state.flags["dir_" + id] || state.team[id].on;
-export const upgradeCost = (id) => Math.round(T[id].upgrade.base * Math.pow(T[id].upgrade.growth, state.team[id].lvl));
+export const upgradeCost = (id) => Math.round(T[id].upgrade.base * Math.pow(T[id].upgrade.growth, state.team[id].lvl) * shopDiscount("officeDiscount"));
 
 export function recruit(id) {
   const m = state.team[id], cfg = T[id];
   if (m.on || state.money < cfg.recruit) return false;
   state.money -= cfg.recruit; m.on = true;
+  m.lvl = Math.max(m.lvl, state.shop.startDir || 0);                // boutique : direction aguerrie
   sfx.unlock();
   bubble(id, id === "jadd" ? "Enfin. Je guette la fenêtre." : id === "yanis" ? "C'est parti. On va automatiser tout ça." : "Je m'occupe de la sécurité.");
   return true;

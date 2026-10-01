@@ -1,43 +1,68 @@
 import { CONFIG } from "./config.js";
 
-export function defaults() {
-  const now = Date.now();
+// Champs propres a UNE agence : ils sont rangés dans state.cities[i].data quand tu diriges une autre agence.
+// Tout le reste (argent, points, boutique, succes, statistiques, explications) est commun a l'entreprise.
+export const AGENCY_FIELDS = ["hoursSaved", "hoursRun", "runMoney", "stress", "credibility", "queue", "offers", "clients", "auto",
+  "staff", "assign", "autoAssign", "office", "ads", "candidates", "people", "photos", "attack", "team", "freeAds"];
+
+const shopLvl = (st, id) => (st.shop && st.shop[id]) || 0;
+
+// Etat de depart d'une agence (la boutique permanente donne des departs plus forts)
+export function freshAgencyFields(city, st = state) {
+  const lvl = (id) => shopLvl(st, id);
+  const auto = {};
+  const types = Object.keys(CONFIG.tasks).filter((k) => CONFIG.tasks[k].city <= city);
+  types.slice(0, lvl("startAuto")).forEach((t) => { auto[t] = { level: 1, verify: true, backlog: [], progress: 0, pausedUntil: 0, crashedUntil: 0, upgrading: null }; });
+  const dir = lvl("startDir");
   return {
-    v: CONFIG.save.version,
-    money: 0,
     hoursSaved: 0,        // heures gagnees disponibles : viennent UNIQUEMENT de l'automatisation
-    hoursRun: 0,          // heures gagnees dans l'agence courante (prestige)
-    lifetimeHours: 0,     // toutes agences confondues
-    runMoney: 0,          // argent gagne dans l'agence courante (deblocage des employes)
+    hoursRun: 0,          // heures gagnees dans cette agence (difficulte, points de remise a zero)
+    runMoney: 0,          // argent gagne dans cette agence (deblocage des rangs de clients)
     stress: 0,
-    city: 0,
-    reputation: 0,
-    credibility: CONFIG.credibility.start,
-    bonusMult: 0,         // bonus permanent des succes
+    credibility: Math.min(100, CONFIG.credibility.start + CONFIG.shop.items.find((i) => i.id === "startCred").per * lvl("startCred")),
     queue: [],
-    nextTaskId: 1,
-    nextClientId: 1,
-    flags: {},            // contenu debloque (onglets, types de taches, compteurs, directeurs)
-    seen: {},             // onglets deja ouverts
     offers: [],
     clients: [],
-    auto: {},             // automatisation par type de tache
-    staff: [],            // ids des employes embauches (data/employees.json)
+    auto,                 // automatisation par type de tache
+    staff: [],            // ids des employes embauches
     assign: {},           // id du membre du personnel -> id du client
     autoAssign: true,
-    office: 0,            // niveau du bureau : limite le nombre d'employes
+    office: Math.min(CONFIG.office.levels.length - 1, lvl("startOffice")),
     ads: { client: null, recruit: null },   // campagnes en cours : { end } (temps de jeu)
     candidates: [],       // profils proposes par les campagnes de recrutement
-    people: {},           // profils generes (employes qui ne sont pas dans data/employees.json)
-    nextPersonId: 1,
+    people: {},           // profils generes
     photos: {},           // cle (client ou employe) -> photo, sans doublon
     attack: null,
+    freeAds: { client: lvl("freeAds"), recruit: lvl("freeAds") },   // campagnes gratuites restantes
     team: {
-      nahel: { on: true,  lvl: 0 },
+      nahel: { on: true,  lvl: dir },
       yanis: { on: false, lvl: 0 },
       jadd:  { on: false, lvl: 0 },
       noah:  { on: false, lvl: 0 },
     },
+  };
+}
+
+export function defaults() {
+  const now = Date.now();
+  return {
+    v: CONFIG.save.version,
+    money: 0,             // argent COMMUN a toutes les agences
+    lifetimeHours: 0,     // heures gagnees, toutes agences et toutes remises a zero confondues
+    points: 0,            // points de la boutique permanente (disponibles)
+    pointsEarned: 0,      // points gagnes au total
+    rebirths: 0,
+    shop: {},             // boutique permanente : id -> niveau
+    cities: CONFIG.prestige.cities.map((_, i) => ({ unlocked: i === 0, data: null, passive: { euro: 0, hours: 0 } })),
+    flow: { accE: 0, accH: 0, euro: 0, hours: 0 },   // rythme recent (abonnements + automatisations) de l'agence active
+    city: 0,              // agence que tu diriges en ce moment
+    bonusMult: 0,         // bonus permanent des succes
+    nextTaskId: 1,
+    nextClientId: 1,
+    nextPersonId: 1,
+    flags: {},            // contenu debloque (onglets, types de taches, compteurs, directeurs)
+    seen: {},             // onglets deja ouverts
+    ...freshAgencyFields(0, { shop: {} }),
     achievements: {},
     stats: {
       tasksDone: 0, autoDone: 0, playSeconds: 0, bugs: 0, cleanSince: null,
@@ -113,7 +138,7 @@ export function startAutosave() {
 
 // ---------- Gains ----------
 export function gainMult() {
-  return (1 + state.reputation * CONFIG.prestige.repBonus + state.bonusMult) * (state.settings.gain || 1);
+  return (1 + state.bonusMult) * (state.settings.gain || 1);
 }
 
 // Nahel : +10 % d'argent par niveau, x1,5 tous les 5 niveaux
@@ -133,17 +158,31 @@ export function stressMult() {
   return 1 - S.gainPenaltyMax * f;
 }
 
-// Ajoute des gains (reputation, succes, Nahel, stress). Retourne les gains reels.
+// bonus de la boutique permanente : +per % par niveau
+export const shopPct = (id) => {
+  const it = CONFIG.shop.items.find((i) => i.id === id);
+  return 1 + (it ? (it.per * (state.shop[id] || 0)) / 100 : 0);
+};
+// reduction de la boutique : 1 = prix normal
+export const shopDiscount = (id) => {
+  const it = CONFIG.shop.items.find((i) => i.id === id);
+  return Math.max(0.3, 1 - (it ? (it.per * (state.shop[id] || 0)) / 100 : 0));
+};
+
+// Ajoute des gains (succes, Nahel, stress, boutique). Retourne les gains reels.
 // Les heures viennent uniquement de l'automatisation.
 export function earn(euro, hours, extra = 1, hoursExtra = 1) {
   const m = gainMult() * stressMult();
-  const e = euro * m * nahelMult() * extra, h = hours * m * hoursExtra;
+  const e = euro * m * nahelMult() * extra, h = hours * m * hoursExtra * shopPct("hoursGain");
   state.money += e;
   state.runMoney += e;
   state.stats.moneyEarned += e;
   if (h > 0) { state.hoursSaved += h; state.hoursRun += h; state.lifetimeHours += h; }
   return { euro: e, hours: h };
 }
+
+// Rythme de l'agence active (sans les tâches à la main) : sert à faire tourner les autres agences.
+export function noteFlow(euro, hours) { state.flow.accE += euro; state.flow.accH += hours; }
 
 export const office = () => CONFIG.office.levels[Math.min(state.office, CONFIG.office.levels.length - 1)];
 export const staffCap = () => office().staff;
