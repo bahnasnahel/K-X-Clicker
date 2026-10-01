@@ -32,10 +32,21 @@ function pickType() {
   return types.find((k) => (r -= CONFIG.tasks[k].weight) < 0) || types[0];
 }
 
-// Difficulte des taches "maison" : monte avec les heures gagnees dans l'agence et avec les villes.
+// Difficulte moyenne des taches "maison" : monte avec les heures gagnees dans l'agence et avec les villes.
+// Chaque palier demande stepGrowth fois plus d'heures que le precedent (120, 240, 480, 960...).
 export function baseDifficulty() {
   const D = CONFIG.difficulty;
-  return Math.min(D.max, 1 + Math.floor(state.hoursRun / D.hoursPerStep) + state.city * D.perCity);
+  let step = 0, need = D.hoursPerStep;
+  while (state.hoursRun >= need && step < D.max) { step++; need *= D.stepGrowth; }
+  return Math.min(D.max, 1 + step + state.city * D.perCity);
+}
+
+// Difficulte reelle d'une tache : la moyenne +/- 2, avec peu de chance des extremes. Rien avant l'explication de la difficulte.
+export function rollDifficulty(mean) {
+  if (!state.flags.difficulty) return mean;
+  let r = Math.random(), off = 0;
+  for (const [o, p] of CONFIG.difficulty.spread) { if ((r -= p) < 0) { off = o; break; } }
+  return clamp(mean + off, 1, CONFIG.auto.maxLevel);
 }
 
 // Les taches plus dures arrivent moins vite.
@@ -43,7 +54,7 @@ export const arrivalFactor = () => 1 + CONFIG.difficulty.slowArrival * (baseDiff
 
 // Cree une tache : un workflow la prend ou elle rejoint la file manuelle.
 export function spawnTask(type, client = null, d = null) {
-  const t = makeTask(type || pickType(), client, d == null ? baseDifficulty() : d);
+  const t = makeTask(type || pickType(), client, rollDifficulty(d == null ? baseDifficulty() : d));
   if (tryAutomate(t)) return;
   if (!enqueue(t) && client) emit("taskLost", t);
 }

@@ -1,6 +1,6 @@
 // Clients : demandes, signature, abonnements, service rendu, satisfaction, credibilite.
 import { CONFIG } from "./config.js";
-import { state, earn, gainMult, noteFlow, shopPct, shopDiscount, securityScore } from "./state.js";
+import { state, earn, gainMult, noteFlow, shopPct, shopDiscount, securityScore, nahelMult, stressMult } from "./state.js";
 import { addSystem } from "./loop.js";
 import { on, emit } from "./events.js";
 import { sfx } from "./audio.js";
@@ -14,8 +14,11 @@ const C = CONFIG.clients, K = CONFIG.credibility;
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export const payFactor = (sat) => (sat >= C.payFullAbove ? 1 : sat / C.payFullAbove);
-export const clientIncome = (c) => c.pay * payFactor(c.sat) * (0.5 + 0.5 * service(c)) * gainMult() * shopPct("clientPay");
+// meme formule que earn() : gains x Nahel x stress, sinon les estimations (hors ligne, butins) sont trop basses
+export const clientIncome = (c) => c.pay * payFactor(c.sat) * (0.5 + 0.5 * service(c)) * gainMult() * shopPct("clientPay") * nahelMult() * stressMult();
 export const incomePerSec = () => state.clients.reduce((s, c) => s + clientIncome(c), 0);
+// libelle d'un rang : "PME Niv. 2"
+export const rankLabel = (o) => `${CONFIG.sizes[o.size].label} Niv. ${(o.lvl || 0) + 1}`;
 export const findClient = (id) => state.clients.find((c) => c.id === id);
 
 // a quoi ressemblerait le service si on signait ce client avec le personnel libre
@@ -41,7 +44,8 @@ export function makeOffer() {
   const boost = 1 + state.city * 0.4;
   const entries = Object.entries(CONFIG.sizes);
   const rk = state.shop.clientRanks || 0;                       // boutique : rangs plus tot
-  const avail = entries.filter(([, z]) => state.runMoney >= z.minMoney * shopDiscount("clientRanks") && state.credibility >= z.minCred - 3 * rk && securityScore() >= z.minSec);
+  const dm = shopDiscount("clientRanks");
+  const avail = entries.filter(([, z]) => state.runMoney >= z.minMoney * dm && state.credibility >= z.minCred - 3 * rk && securityScore() >= z.minSec);
   const topIdx = Math.max(...avail.map(([k]) => entries.findIndex(([x]) => x === k)));
   const weights = avail.map(([k, z]) => {
     const idx = entries.findIndex(([x]) => x === k);
@@ -53,6 +57,12 @@ export function makeOffer() {
   for (const [k, w] of weights) { if ((r -= w) < 0) { size = k; break; } }
   const sz = CONFIG.sizes[size], N = CONFIG.cityNeedBonus;
 
+  // niveau dans le rang (Niv. 1 a 3) : chaque niveau s'ouvre avec plus d'argent gagne ; les plus hauts sont favorises comme les rangs
+  const RL = CONFIG.rankLevels, steps = [sz.minMoney, ...sz.levelMoney];
+  const maxLv = steps.reduce((n, m, i) => (state.runMoney >= m * dm ? i : n), 0);
+  let lv = 0, lr = Math.random() * Array.from({ length: maxLv + 1 }, (_, i) => Math.pow(CONFIG.higherTierDamp, maxLv - i)).reduce((a, b) => a + b, 0);
+  for (let i = 0; i <= maxLv; i++) { lr -= Math.pow(CONFIG.higherTierDamp, maxLv - i); if (lr < 0) { lv = i; break; } }
+
   // profil dans le palier : u (0 a 1) place le client dans la plage de temps demande du palier ;
   // plus il demande, plus il rapporte (et plus il est exigeant en competence)
   const [lo, hi] = CONFIG.profileSpread;
@@ -61,11 +71,11 @@ export function makeOffer() {
   const m = lo + u * (hi - lo);
   let skill = sz.skill[0] + Math.floor(Math.random() * (sz.skill[1] - sz.skill[0] + 1));
   if (m > 1.3) skill += 1; else if (m < 0.8) skill -= 1;
-  skill = Math.max(1, Math.min(10, skill + state.city * N.skill));
+  skill = Math.max(1, Math.min(10, skill + state.city * N.skill + RL[lv].skill));
   const [t0, t1] = sz.timeRange;
-  const time = Math.max(2, Math.round((t0 + u * (t1 - t0)) * (1 + state.city * N.time)));
-  const pay = +(sz.pay * Math.pow(m, 1.4) * (1 + 0.5 * state.city)).toFixed(2);
-  return { id: state.nextClientId++, sector: sid, name, size, pay, every: sz.taskEverySec, types: sec.tasks, need: { time, skill }, profile: +m.toFixed(2) };
+  const time = Math.max(2, Math.round((t0 + u * (t1 - t0)) * (1 + state.city * N.time) * RL[lv].time));
+  const pay = +(sz.pay * RL[lv].pay * Math.pow(m, 1.4) * (1 + 0.5 * state.city)).toFixed(2);
+  return { id: state.nextClientId++, sector: sid, name, size, lvl: lv, pay, every: sz.taskEverySec, types: sec.tasks, need: { time, skill }, profile: +m.toFixed(2) };
 }
 
 export function signOffer(id) {
@@ -114,7 +124,21 @@ export function terminateClient(id) {
   return true;
 }
 
+// ---- Bouche-a-oreille : des demandes arrivent toutes seules, de plus en plus vite avec la credibilite ----
+let word = 0;
+export const wordInterval = () => C.offerEverySec * (C.offerIntervalAt0 + (C.offerIntervalAt100 - C.offerIntervalAt0) * (state.credibility / 100));
+function wordOfMouth(dt) {
+  if (!state.flags.clients || state.offers.length >= C.maxOffers) { return; }
+  word += dt / wordInterval();
+  if (word < 1) return;
+  word = 0;
+  state.offers.push(makeOffer());
+  sfx.coin();
+  toast("Le bouche-à-oreille fonctionne : un client te contacte.");
+}
+
 function tick(dt) {
+  wordOfMouth(dt);
   const types = availableTypes();
   let sumService = 0;
   for (let i = state.clients.length - 1; i >= 0; i--) {

@@ -13,6 +13,12 @@ import { removeClient } from "./clients.js";
 const L = CONFIG.lawsuit;
 let acc = 0, nextAt = 0, open = false;
 
+// chance de gagner : lineaire selon le service rendu a ce client (peu de service = peu de chance)
+const winChance = (c) => {
+  const t = clamp((service(c) - L.serviceLow) / (L.serviceHigh - L.serviceLow), 0, 1);
+  return L.courtWinMin + (L.courtWinMax - L.courtWinMin) * t;
+};
+
 const cred = (v) => { state.credibility = clamp(state.credibility + v, 0, 100); };
 
 function trigger() {
@@ -21,6 +27,7 @@ function trigger() {
   open = true;
   state.stats.lawsuits++;
   nextAt = state.stats.playSeconds + L.cooldownSec;
+  const chance = winChance(worst);
   const fine = Math.round(L.fineBase * (1 + state.city) * (1 + Math.min(state.runMoney, 20000) / 20000));
   sfx.alert();
   modal((box, close) => {
@@ -34,10 +41,12 @@ function trigger() {
       toast("Affaire réglée à l'amiable.");
       open = false; close();
     };
-    const court = el("button", "btn danger", `Plaider (${Math.round(L.courtWinChance * 100)} % de gagner)`);
+    const court = el("button", "btn danger", `Plaider (${Math.round(chance * 100)} % de gagner)`);
     court.onclick = () => {
-      if (Math.random() < L.courtWinChance) {
-        cred(L.courtWinCred); sfx.unlock(); toast("Procès gagné. Ta crédibilité remonte.");
+      if (Math.random() < chance) {
+        const dmg = Math.round(fine * L.damagesShare);
+        state.money += dmg; state.runMoney += dmg; state.stats.moneyEarned += dmg;
+        cred(L.courtWinCred); sfx.unlock(); toast(`Procès gagné : ${worst.name} te verse ${fmt(dmg)} EUR de dommages et ta crédibilité remonte.`);
       } else {
         state.money = Math.max(0, state.money - fine * L.courtLoseCostMult);
         cred(L.courtLoseCred); sfx.error();
@@ -46,8 +55,8 @@ function trigger() {
       }
       open = false; close();
     };
-    box.append(settle, court, el("p", "muted small", "À l'amiable, c'est sûr mais ça coûte. Au tribunal, tu peux tout gagner ou tout perdre."));
-  });
+    box.append(settle, court, el("p", "muted small", "À l'amiable, c'est sûr mais ça coûte. Au tribunal, tu peux tout gagner ou tout perdre : plus ce client était bien servi, plus tu as de chances de gagner."));
+  }, { lock: true });
 }
 
 function tick(dt) {

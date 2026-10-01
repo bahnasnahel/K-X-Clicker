@@ -1,6 +1,6 @@
 // Service worker K'X Clicker : jeu complet hors ligne.
 // A CHAQUE MISE EN LIGNE, incremente VERSION pour forcer la mise a jour.
-const VERSION = "v10-0004";
+const VERSION = "v10-0005";
 const CACHE = "kx-" + VERSION;
 
 const FILES = [

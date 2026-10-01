@@ -32,6 +32,29 @@ function spendTotal(amount) {
 }
 export const nextToBuy = () => P.cities.findIndex((_, i) => !owned(i));
 
+// temps estime avant de pouvoir acheter l'agence, en clair
+export function etaText(p) {
+  if (p.etaSec === 0) return "tu peux l'acheter";
+  if (p.etaSec == null) return "rythme trop faible pour estimer";
+  const m = Math.round(p.etaSec / 60);
+  if (m < 1) return "moins d'une minute";
+  if (m < 60) return `environ ${m} min`;
+  const h = p.etaSec / 3600;
+  return h < 48 ? `environ ${Math.round(h)} h` : `environ ${Math.round(h / 24)} jours`;
+}
+
+// Progression vers la prochaine agence : argent total / prix, et temps estime au rythme actuel
+// (rythme = agence active, salaires deduits, + part des agences qui tournent en ton absence).
+export function nextAgencyProgress() {
+  const i = nextToBuy();
+  if (i < 0) return null;
+  const total = totalMoney(), cost = price(i);
+  let rate = state.flow.euro - payroll();
+  state.cities.forEach((c, k) => { if (k !== state.city && c.data) rate += c.passive.euro * P.passiveFactor; });
+  const left = Math.max(0, cost - total);
+  return { i, name: cityName(i), total, cost, pct: Math.min(1, cost > 0 ? total / cost : 1), etaSec: left <= 0 ? 0 : rate > 0.001 ? left / rate : null, prevOk: i === 0 || owned(i - 1) };
+}
+
 function resetFlow() { state.flow = { accE: 0, accH: 0, euro: 0, hours: 0 }; }
 const snapshot = () => Object.fromEntries(AGENCY_FIELDS.map((f) => [f, state[f]]));
 function restore(data) {
@@ -110,6 +133,8 @@ export function rebirth() {
   state.points += g; state.pointsEarned += g; state.rebirths++;
   const f = freshAgencyFields(state.city);
   for (const k of AGENCY_FIELDS) state[k] = f[k];
+  state.freeAds.client += P.freeAdsOnReset;                // chaque remise a zero offre une campagne gratuite (clients et recrutement)
+  state.freeAds.recruit += P.freeAdsOnReset;
   state.stats.cleanSince = null;
   resetFlow();
   emit("agencyReset");

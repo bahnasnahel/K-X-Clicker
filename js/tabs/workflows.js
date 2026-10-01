@@ -13,6 +13,9 @@ import {
 const A = CONFIG.auto;
 const STATUS = { off: "Pas installé", ok: "En marche", crashed: "Planté", paused: "Attaqué" };
 
+// des taches de ce type dans ta boite sont plus dures que le niveau de l'automatisation
+const tooHard = (type) => level(type) > 0 && state.queue.some((t) => t.type === type && (t.d || 1) > level(type));
+
 // difficulte la plus elevee demandee par les clients actuels pour ce type
 const maxDemand = (type) => state.clients.reduce((m, c) => (c.types.includes(type) ? Math.max(m, c.need.skill) : m), 1);
 
@@ -21,7 +24,7 @@ export default {
   badge: () => availableTypes().some((t) => canUpgrade(t)),
   mount(root) {
     const sig = () => JSON.stringify([
-      availableTypes().map((t) => [t, level(t), verifyOn(t), canUpgrade(t), needsYanis(t), maxDemand(t) > level(t)]),
+      availableTypes().map((t) => [t, level(t), verifyOn(t), canUpgrade(t), needsYanis(t), maxDemand(t) > level(t), tooHard(t)]),
       state.team.yanis.on, availableTypes().map((t) => upgrading(t)),
     ]);
     this.view = liveView(root, sig, (r, live) => {
@@ -31,7 +34,8 @@ export default {
 
       for (const type of availableTypes()) {
         const L = level(type);
-        const card = el("div", "card wfcard");
+        const card = el("div", "card wfcard" + (tooHard(type) ? " hard" : ""));
+        if (tooHard(type)) card.append(el("p", "hardnote", "Tâches trop dures : améliore-la"));
         const head = el("div", "wfhead", `<span class="t-${type}">${icon(type, 22)}</span><b>${CONFIG.tasks[type].label}</b><span class="pill"></span>`);
         const pill = head.querySelector(".pill");
         const lvl = el("div", "wflevel", L ? `Niveau ${L} sur ${A.maxLevel} · ${A.levelNames[L]}` : "Pas encore automatisé");

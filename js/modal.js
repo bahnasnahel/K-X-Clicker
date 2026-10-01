@@ -1,14 +1,15 @@
 import { el } from "./util.js";
 
 // Fenetres modales simples, basees sur des promesses.
-export function modal(build) {
+// options : lock = pas de fermeture en tapant a cote ; live = le jeu continue de tourner pendant que la fenetre est ouverte
+export function modal(build, { lock = false, live = false } = {}) {
   return new Promise((resolve) => {
-    const ov = el("div", "overlay");
+    const ov = el("div", "overlay" + (live ? " live" : ""));
     const box = el("div", "modal");
     const close = (v) => { ov.remove(); resolve(v); };
     build(box, close);
     ov.append(box);
-    ov.addEventListener("click", (e) => { if (e.target === ov) close(null); });
+    if (!lock) ov.addEventListener("click", (e) => { if (e.target === ov) close(null); });
     document.body.append(ov);
   });
 }

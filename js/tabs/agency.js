@@ -3,7 +3,7 @@ import { CONFIG } from "../config.js";
 import { state } from "../state.js";
 import { sfx } from "../audio.js";
 import { confirmDialog } from "../modal.js";
-import { cityName, owned, price, canBuy, buyAgency, switchAgency, pointsGain, rebirth, totalMoney } from "../agencies.js";
+import { cityName, owned, price, canBuy, buyAgency, switchAgency, pointsGain, rebirth, totalMoney, nextAgencyProgress, etaText } from "../agencies.js";
 import * as shop from "../shop.js";
 
 const P = CONFIG.prestige;
@@ -29,6 +29,21 @@ export default {
         setText(tm, `${fmt(totalMoney())} EUR`);
       });
       r.append(tot);
+
+      // progression vers la prochaine agence
+      const np = nextAgencyProgress();
+      if (np) {
+        const pc = el("div", "card totalcard");
+        pc.innerHTML = `<span class="kind">Prochaine agence : K'X ${np.name}</span><b class="totval pgval"></b><i class="bar"><b class="pgbar"></b></i><span class="sdesc pgeta"></span>`;
+        const pv = pc.querySelector(".pgval"), pb = pc.querySelector(".pgbar"), pe = pc.querySelector(".pgeta");
+        live(() => {
+          const p = nextAgencyProgress(); if (!p) return;
+          setText(pv, `${fmt(p.total)} / ${fmt(p.cost)} EUR`);
+          pb.style.width = Math.round(p.pct * 100) + "%";
+          setText(pe, `${Math.floor(p.pct * 100)} %${p.prevOk ? "" : " · il faut d'abord débloquer l'agence précédente"} · ${etaText(p)}`);
+        });
+        r.append(pc);
+      }
 
       // explication
       const how = el("div", "card howcard");

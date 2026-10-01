@@ -13,8 +13,8 @@ export function runSystems(dt) {
   for (const fn of systems) fn(dt);
 }
 
-// Le jeu est en pause tant qu'une explication ou une fenetre est ouverte.
-export const isPaused = () => !!document.querySelector(".overlay, .tuto");
+// Le jeu est en pause tant qu'une explication ou une fenetre est ouverte (sauf les fenetres "live" : incident de securite).
+export const isPaused = () => !!document.querySelector(".overlay:not(.live), .tuto");
 
 export function startLoop() {
   const step = CONFIG.loop.stepMs;

@@ -1,7 +1,7 @@
 import { el, fmt, liveView } from "../util.js";
 import { CONFIG } from "../config.js";
 import { state, securityScore } from "../state.js";
-import { measureLvl, measureCost, measureMaxed, canBuyMeasure, buyMeasure, measureBlock, enemyCap, enemyLabel, styleOf, huntTarget, huntSpeed, huntMode, setHuntMode, MODES, bounty } from "../security.js";
+import { measureLvl, measureCost, measureMaxed, canBuyMeasure, buyMeasure, measureBlock, enemyCap, enemyLabel, styleOf, huntTargets, huntCount, huntSpeed, huntMode, setHuntMode, MODES, bounty } from "../security.js";
 
 const S = CONFIG.security, A = CONFIG.attacks, E = CONFIG.enemies;
 const pct = (v) => Math.round(v * 100);
@@ -11,7 +11,7 @@ export default {
   badge: () => !!state.attack,
   mount(root) {
     const sig = () => JSON.stringify([
-      state.sec, securityScore(), S.measures.map((m) => canBuyMeasure(m.id)), state.team.noah, state.city, state.stats.attacksRepelled, state.enemies.map((e) => e.id), huntMode(),
+      state.sec, securityScore(), S.measures.map((m) => canBuyMeasure(m.id)), state.team.noah, huntCount(), state.city, state.stats.attacksRepelled, state.enemies.map((e) => e.id), huntMode(),
     ]);
     this.view = liveView(root, sig, (r, live) => {
       r.append(el("h2", "h", "Sécurité"));
@@ -36,7 +36,7 @@ export default {
       const nc = el("div", "card tiercard");
       nc.append(el("div", "credhead", "<b>Noah, direction</b>"));
       nc.append(el("span", "sdesc", n.on
-        ? `Niveau ${n.lvl} : il traque ${huntSpeed().toFixed(1).replace(".", ",")} point${huntSpeed() >= 2 ? "s" : ""} par seconde. Chaque ennemi détruit te rapporte de l'argent.`
+        ? `Niveau ${n.lvl} : il traque ${huntSpeed().toFixed(1).replace(".", ",")} point${huntSpeed() >= 2 ? "s" : ""} par seconde, sur ${huntCount()} ennemi${huntCount() > 1 ? "s" : ""} à la fois (un de plus tous les ${CONFIG.team.noah.huntEvery} niveaux). Chaque ennemi détruit te rapporte de l'argent.`
         : "Il arrive dès que la sécurité est introduite."));
       nc.append(el("span", "sdesc", "Qui vise-t-il en priorité ?"));
       const row = el("div", "row");
@@ -52,7 +52,7 @@ export default {
 
       // ennemis actifs
       r.append(el("div", "qhead", `<h2 class="h">Ennemis</h2><span class="qcount">${state.enemies.length} / ${enemyCap()}</span>`));
-      r.append(el("p", "muted small", "Plus tu gagnes d'argent, plus des ennemis voudront t'attaquer, et plus ils sont forts. Chacun a son style. Noah les détruit un par un."));
+      r.append(el("p", "muted small", "Plus tu gagnes d'argent, plus des ennemis voudront t'attaquer, et plus ils sont forts. Chacun a son style. Noah les détruit."));
       if (!state.enemies.length) r.append(el("p", "muted", "Aucun ennemi pour le moment."));
       for (const e of state.enemies) {
         const st = styleOf(e), K = A.kinds[e.kind];
@@ -63,7 +63,7 @@ export default {
         const bar = c.querySelector(".bar b"), line = c.querySelector(".satline");
         live(() => {
           bar.style.width = Math.max(0, (e.hp / e.maxHp) * 100) + "%";
-          const tg = huntTarget(), t = tg && tg.id === e.id;
+          const t = huntTargets().some((x) => x.id === e.id);
           line.textContent = t ? "Noah le traque" : "En attente";
         });
         r.append(c);

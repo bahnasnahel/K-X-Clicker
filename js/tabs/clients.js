@@ -5,7 +5,7 @@ import { icon } from "../icons.js";
 import { sfx } from "../audio.js";
 import { modal, infoDialog, confirmDialog } from "../modal.js";
 import { avatar } from "../avatar.js";
-import { signOffer, dropOffer, terminateClient, satRate, clientIncome, incomePerSec, previewService } from "../clients.js";
+import { signOffer, dropOffer, terminateClient, satRate, clientIncome, incomePerSec, previewService, rankLabel } from "../clients.js";
 import { staffList, assignedTo, timeGiven, skillGiven, service, assign, autoAssign, payroll } from "../staff.js";
 import { clientAdCost, adIsFree, canClientAd, launchClientAd, adRunning, adLeft } from "../ads.js";
 
@@ -98,7 +98,9 @@ export default {
       tiers.append(el("div", "credhead", "<b>Rangs de clients</b>"));
       Object.entries(CONFIG.sizes).forEach(([k, z]) => {
         const ok = state.runMoney >= z.minMoney && state.credibility >= z.minCred && securityScore() >= z.minSec;
-        tiers.append(el("div", "tierrow " + (ok ? "ok" : "lock"), `<b>${z.label}</b><span>${ok ? "disponible" : `il faut ${fmt(z.minMoney)} EUR gagnés, ${z.minCred} % de crédibilité${z.minSec ? ` et ${z.minSec} de score de sécurité` : ""}`}</span>`));
+        const steps = [z.minMoney, ...z.levelMoney], got = steps.filter((m) => state.runMoney >= m).length;
+        const lvTxt = got < steps.length ? `Niv. ${got} ouvert, Niv. ${got + 1} à ${fmt(steps[got])} EUR gagnés` : "tous les niveaux ouverts";
+        tiers.append(el("div", "tierrow " + (ok ? "ok" : "lock"), `<b>${z.label}</b><span>${ok ? lvTxt : `il faut ${fmt(z.minMoney)} EUR gagnés, ${z.minCred} % de crédibilité${z.minSec ? ` et ${z.minSec} de score de sécurité` : ""}`}</span>`));
       });
       r.append(tiers);
 
@@ -108,7 +110,7 @@ export default {
         const sec = CONFIG.sectors[o.sector], sv = previewService(o);
         const c = el("div", "card client offer");
         c.insertAdjacentHTML("beforeend", avatar({}, "", "c:" + o.id));
-        c.append(el("div", "cinfo", `<b>${o.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[o.size].label} · ${profil(o.profile || 1)}</span><span class="ctasks">${types(o.types)}</span>
+        c.append(el("div", "cinfo", `<b>${o.name}</b><span class="kind">${sec.label} · ${rankLabel(o)} · ${profil(o.profile || 1)}</span><span class="ctasks">${types(o.types)}</span>
           <span class="need">Besoin : ${o.need.time} h · niveau ${o.need.skill}</span><span class="serv ${servClass(sv)}">Service estimé avec ton équipe libre : ${pct(sv)}</span><span class="gold">${fmt2(o.pay)} EUR / s</span>`));
         const col = el("span", "btncol");
         const b = el("button", "btn small-btn", "Signer");
@@ -125,7 +127,7 @@ export default {
         const sec = CONFIG.sectors[cl.sector];
         const who = assignedTo(cl.id);
         const c = el("div", "card client");
-        c.innerHTML = `${avatar({}, "", "c:" + cl.id)}<div class="cinfo"><b>${cl.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[cl.size].label} · ${profil(cl.profile || 1)}</span><span class="ctasks">${types(cl.types)}</span>
+        c.innerHTML = `${avatar({}, "", "c:" + cl.id)}<div class="cinfo"><b>${cl.name}</b><span class="kind">${sec.label} · ${rankLabel(cl)} · ${profil(cl.profile || 1)}</span><span class="ctasks">${types(cl.types)}</span>
           <span class="need"></span><i class="bar svc"><b></b></i><span class="satline"></span><span class="evol"></span>
           <span class="staffrow">${who.map((p) => `<span class="chip2 busy">${p.isNahel ? "Toi" : p.prenom} · niv ${p.skill} · ${p.time} h</span>`).join("") || "<em>Personne d'affecté</em>"}</span></div>`;
         const col = el("span", "btncol");

@@ -69,13 +69,13 @@ export const huntSpeed = () => (noah().on ? N.huntBase + N.huntPerLevel * noah()
 export const MODES = { strong: "Le plus fort", weak: "Le plus faible", order: "Ordre d'apparition" };
 export const huntMode = () => noah().mode || "strong";
 export const setHuntMode = (m) => { noah().mode = m; sfx.tap(); };
-export function huntTarget() {
-  const list = state.enemies;
-  if (!list.length) return null;
+// nombre d'ennemis traques en meme temps : 1, +1 tous les 10 niveaux de Noah
+export const huntCount = () => (noah().on ? 1 + Math.floor(noah().lvl / N.huntEvery) : 0);
+export function huntTargets() {
   const m = huntMode();
-  if (m === "order") return list.reduce((a, b) => (b.id < a.id ? b : a));
   const f = (e) => e.lvl * 1000 + e.maxHp;                       // force : niveau, puis temps de traque
-  return list.reduce((a, b) => ((m === "weak" ? f(b) < f(a) : f(b) > f(a)) ? b : a));
+  const sorted = [...state.enemies].sort(m === "order" ? (a, b) => a.id - b.id : m === "weak" ? (a, b) => f(a) - f(b) : (a, b) => f(b) - f(a));
+  return sorted.slice(0, huntCount());
 }
 export const bounty = (e) => Math.round(Math.max(E.bountyMin * e.lvl, incomePerSec() * E.bountySec * e.lvl));
 
@@ -219,7 +219,7 @@ export function openIncident() {
       left.textContent = `Il te reste ${Math.ceil(t)} s.`;
     };
     upd(); clearInterval(timer); timer = setInterval(upd, 200);
-  }).then(() => { closeInc = null; clearInterval(timer); });
+  }, { live: true }).then(() => { closeInc = null; clearInterval(timer); });
 }
 
 // ---- Boucle ----
@@ -251,8 +251,7 @@ function tick(dt) {
   }
 
   // Noah traque l'ennemi vise
-  const t = huntTarget();
-  if (t) { t.hp -= huntSpeed() * dt; if (t.hp <= 0) destroy(t); }
+  for (const t of huntTargets()) { t.hp -= huntSpeed() * dt; if (t.hp <= 0) destroy(t); }
 
   // chaque ennemi attaque a son rythme (une seule attaque a la fois)
   for (const e of state.enemies) {

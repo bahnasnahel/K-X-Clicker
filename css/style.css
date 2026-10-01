@@ -21,6 +21,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .iconbtn:active{background:var(--n3)}
 .iconbtn.off{color:#7a6ba8}
 .iconbtn.off::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:3px;background:var(--m);transform:rotate(-45deg)}
+.deskhint{position:absolute;right:6px;bottom:4px;font:8px var(--px);color:var(--l);opacity:.75;text-shadow:1px 1px 0 var(--n1);pointer-events:none}
 .desklabel{position:absolute;left:6px;bottom:4px;font:8px var(--px);color:var(--l);opacity:.75;text-shadow:1px 1px 0 var(--n1)}
 
 .counters{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;background:var(--n2);border-bottom:3px solid var(--n3)}
@@ -188,6 +189,8 @@ h3.h{color:var(--or)}
 .envinfo{display:flex;flex-direction:column;gap:3px;min-width:0}
 .envinfo b{font:10px var(--px);color:var(--l)} .envline{font-size:13px;opacity:.85}
 .wfcard{display:block}
+.wfcard.hard{border-color:#ff9f43}
+.hardnote{margin:0 0 8px;padding:6px 8px;background:#ff9f43;color:var(--n1);font:700 12px var(--tx)}
 .wfhead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .wfhead b{flex:1;font:10px/1.4 var(--px);min-width:0}
 .pill{font:8px var(--px);padding:5px 7px;background:var(--n3);color:var(--l);white-space:nowrap}

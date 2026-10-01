@@ -9,6 +9,7 @@ import { openIncident } from "./security.js";
 import { startTutorial } from "./tutorial.js";
 import { openCheat, cheatActive, cheatLabel } from "./cheat.js";
 import { stressMult } from "./state.js";
+import { nextAgencyProgress } from "./agencies.js";
 import tasks from "./tabs/tasks.js";
 import workflows from "./tabs/workflows.js";
 import clients from "./tabs/clients.js";
@@ -89,6 +90,8 @@ export function updateUI() {
   set("money", $("#c-money"), fmt(state.money));
   set("hours", $("#c-hours"), fmtHours(state.hoursSaved));
   set("stress", $("#c-stress"), Math.round(state.stress) + " %");
+  const np = nextAgencyProgress();
+  set("agencyHint", $("#desk-hint"), np && state.flags.agency ? `K'X ${np.name} : ${Math.floor(np.pct * 100)} %` : "");
   $("#cell-hours").hidden = !state.flags.hours;
   $("#stress-cell").hidden = !state.flags.stress;
   $("#bar-stress").style.width = state.stress + "%";

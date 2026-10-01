@@ -63,7 +63,14 @@ export const CONFIG = {
   // Les taches deviennent de plus en plus dures avec les heures gagnees (et les villes).
   // Une tache de difficulte D demande 1 + (D-1)/passesEvery etapes a la main,
   // et une automatisation doit "passer" autant de fois dessus (donc plus lent). Il faut aussi un niveau >= D.
-  difficulty: { hoursPerStep: 120, max: 8, perCity: 1, passesEvery: 2, slowArrival: 0.3 },   // slowArrival : les taches arrivent moins vite quand elles sont plus dures (+30 % de delai par point)
+  difficulty: {
+    hoursPerStep: 120,          // 1er palier de difficulte a 120 h gagnees ; chaque palier demande stepGrowth fois plus d'heures que le precedent (120, 240, 480, 960...)
+    stepGrowth: 2,
+    max: 8, perCity: 1, passesEvery: 2,
+    slowArrival: 0.3,           // les taches arrivent moins vite quand elles sont plus dures (+30 % de delai par point)
+    // difficulte reelle d'une tache a la main = difficulte moyenne + ecart : [ecart, chance]. Les extremes (+-2) sont rares.
+    spread: [[-2, 0.06], [-1, 0.29], [0, 0.30], [1, 0.29], [2, 0.06]],
+  },   // slowArrival : les taches arrivent moins vite quand elles sont plus dures (+30 % de delai par point)
 
   queue: {
     capacity: 8,           // au-dela, le stress monte
@@ -172,10 +179,11 @@ export const CONFIG = {
 
   // --- Clients ---
   clients: {
-    startOfferInSec: 8,         // premiere demande
-    offerEverySec: 35,          // delai moyen entre deux demandes
-    offerRepFactor: 0.92,       // x par point de reputation (arrivent plus vite)
-    maxOffers: 3,
+    // bouche-a-oreille : une demande arrive toute seule apres offerEverySec x facteur (facteur : offerIntervalAt0 a 0 % de credibilite, offerIntervalAt100 a 100 %)
+    offerEverySec: 30,
+    offerIntervalAt0: 20,       // x delai a 0 % de credibilite (presque jamais : 600 s)
+    offerIntervalAt100: 1,      // x delai a 100 % de credibilite (30 s)
+    maxOffers: 3,               // le bouche-a-oreille s'arrete quand tant de demandes attendent
     startSatisfaction: 60,
     payFullAbove: 50,           // sous ce seuil de satisfaction, l'abonnement baisse
     satisfied: 90,              // seuil "client satisfait" (succes)
@@ -195,13 +203,20 @@ export const CONFIG = {
   // Dans un meme palier, chaque client a un "profil" (spread) : certains demandent plus et rapportent plus.
   // minMoney : argent gagne dans l'agence ; minCred : credibilite minimale ; minSec : score de securite minimal pour qu'ils se presentent.
   sizes: {
-    artisan: { label: "Artisan",      pay: 0.3, taskEverySec: 14, timeRange: [4, 12],    skill: [1, 1],  minMoney: 0,     minCred: 0, minSec: 0,  weight: 1 },
-    tpe:     { label: "TPE",          pay: 1.4, taskEverySec: 8,  timeRange: [9, 30],    skill: [2, 3],  minMoney: 500,   minCred: 25, minSec: 10, weight: 0.9 },
-    pme:     { label: "PME",          pay: 6,   taskEverySec: 5,  timeRange: [20, 70],   skill: [4, 5],  minMoney: 3000,  minCred: 45, minSec: 30, weight: 0.6 },
-    eti:     { label: "ETI",          pay: 26,  taskEverySec: 3,  timeRange: [45, 140],  skill: [6, 7],  minMoney: 15000, minCred: 65, minSec: 55, weight: 0.35 },
-    groupe:  { label: "Grand groupe", pay: 110, taskEverySec: 2,  timeRange: [90, 280],  skill: [8, 10], minMoney: 60000, minCred: 80, minSec: 80, weight: 0.2 },
+    artisan: { label: "Artisan",      pay: 0.3, taskEverySec: 14, timeRange: [4, 12],    skill: [1, 1],  minMoney: 0,     levelMoney: [250, 800], minCred: 0, minSec: 0,  weight: 1 },
+    tpe:     { label: "TPE",          pay: 1.4, taskEverySec: 8,  timeRange: [9, 30],    skill: [2, 3],  minMoney: 500,   levelMoney: [1500, 4500], minCred: 25, minSec: 10, weight: 0.9 },
+    pme:     { label: "PME",          pay: 6,   taskEverySec: 5,  timeRange: [20, 70],   skill: [4, 5],  minMoney: 3000,  levelMoney: [9000, 27000], minCred: 45, minSec: 30, weight: 0.6 },
+    eti:     { label: "ETI",          pay: 26,  taskEverySec: 3,  timeRange: [45, 140],  skill: [6, 7],  minMoney: 15000, levelMoney: [50000, 140000], minCred: 65, minSec: 55, weight: 0.35 },
+    groupe:  { label: "Grand groupe", pay: 110, taskEverySec: 2,  timeRange: [90, 280],  skill: [8, 10], minMoney: 60000, levelMoney: [200000, 600000], minCred: 80, minSec: 80, weight: 0.2 },
   },
   profileSpread: [0.65, 1.6],   // multiplicateur de profil : paiement x m^1.4, competence +/- 1 aux extremes. Le temps demande suit la meme position dans timeRange.
+  // Niveaux dans chaque rang (Niv. 1 a 3) : levelMoney = argent gagne pour ouvrir le Niv. 2 puis le Niv. 3.
+  // Chaque niveau multiplie le gain et le temps demande, et ajoute de la competence.
+  rankLevels: [
+    { pay: 1,   time: 1,    skill: 0 },
+    { pay: 1.8, time: 1.15, skill: 0 },
+    { pay: 3.2, time: 1.3,  skill: 1 },
+  ],
   higherTierDamp: 0.6,          // chaque palier plus haut deja disponible reduit la part des clients de rang inferieur
   cityNeedBonus: { time: 0.1, skill: 0 },    // par ville : +10 % de temps demande
 
@@ -226,9 +241,6 @@ export const CONFIG = {
     highPerSec: 0.03,
     onResign: -6,
     unpaidPerSec: -0.05,        // salaires impayes (argent a zero)
-    offerIntervalAt0: 1.6,      // x delai entre demandes a 0 % de credibilite
-    offerIntervalAt100: 0.7,    // ... a 100 %
-    noBigBelow: 40,             // sous ce seuil, plus de gros clients
   },
   lawsuit: {
     below: 25,                  // credibilite sous laquelle un client peut attaquer
@@ -237,7 +249,10 @@ export const CONFIG = {
     cooldownSec: 300,
     fineBase: 300,              // x (1 + ville)
     settleCred: 12,             // a l'amiable : credibilite recuperee
-    courtWinChance: 0.45,
+    courtWinMin: 0.25,          // chance de gagner si le service rendu a ce client etait <= serviceLow
+    courtWinMax: 0.75,          // ... et s'il etait >= serviceHigh (lineaire entre les deux)
+    serviceLow: 0.2, serviceHigh: 0.8,
+    damagesShare: 0.5,          // gagne : le client verse cette part de l'amende en dommages
     courtWinCred: 8,
     courtLoseCostMult: 2,       // perdu : amende x2 et le client part
     courtLoseCred: -10,
@@ -255,13 +270,15 @@ export const CONFIG = {
       recruit: 120, upgrade: { base: 150, growth: 1.5 }, maxLevel: 100,
       speedBonus: 0.2, hoursEvery: 5, hoursBoost: 2 },
     jadd: { name: "Jadd Barnas", role: "Ingénieur ouvreur de fenêtres",
-      desc: "Il guette la fenêtre et l'ouvre dès que quelque chose passe. À chaque ouverture, un événement arrive. Plus il monte de niveau, plus il ouvre au bon moment (événements positifs).",
+      desc: "Il guette la fenêtre et l'ouvre dès que quelque chose passe. À chaque ouverture, un événement arrive. Plus il monte de niveau, plus il ouvre au bon moment : 50 % d'événements positifs au départ, 80 % au niveau 10. Après le niveau 10, chaque niveau renforce de 10 % l'effet des bons événements. Tous les 5 niveaux, cet effet est doublé (x2 au niveau 5, x4 au niveau 10...).",
       recruit: 250, upgrade: { base: 200, growth: 1.5 }, maxLevel: 100,
-      eventEverySec: [35, 70], goodBase: 0.3, goodPerLevel: 0.065, goodMax: 0.95 },
+      eventEverySec: [35, 70], goodBase: 0.5, goodPerLevel: 0.03, goodMax: 0.8,       // chance de bon evenement : 50 % -> 80 % au niveau 10
+      goodAfter: 10, goodAfterPerLevel: 0.1, goodDoubleEvery: 5 },   // effet des bons evenements : +10 % par niveau apres le niveau 10, x2 tous les 5 niveaux
     noah: { name: "Noah", role: "Cybersécurité",
-      desc: "Il traque les ennemis qui t'attaquent et les détruit, un par un. Chaque niveau : il va plus vite. Chaque ennemi détruit te rapporte de l'argent. Tu choisis qui il vise en priorité dans l'onglet Sécurité.",
+      desc: "Il traque les ennemis qui t'attaquent et les détruit. Chaque niveau : il va plus vite. Tous les 10 niveaux, il traque un ennemi de plus en même temps (2 au niveau 10, 3 au niveau 20...). Chaque ennemi détruit te rapporte de l'argent. Tu choisis qui il vise en priorité dans l'onglet Sécurité.",
       recruit: 0, upgrade: { base: 350, growth: 1.5 }, maxLevel: 100,      // offert des l'introduction de la securite
-      huntBase: 1, huntPerLevel: 0.6 },                                     // points de traque par seconde : base + niveau x par niveau
+      huntBase: 1, huntPerLevel: 0.6,                                      // points de traque par seconde et par ennemi
+      huntEvery: 10 },                                                      // un ennemi de plus traque en meme temps tous les 10 niveaux                                     // points de traque par seconde : base + niveau x par niveau
   },
 
   // --- Evenements de la fenetre de Jadd ---
@@ -368,6 +385,7 @@ export const CONFIG = {
   prestige: {
     cities: ["Angoulême", "Le Mans", "Paris"],
     prices: [0, 1000000, 50000000],   // prix en EUR pour debloquer chaque agence
+    freeAdsOnReset: 1,                // campagnes gratuites (clients et recrutement) offertes a chaque remise a zero
     passiveFactor: 0.6,               // rendement d'une agence que tu ne diriges pas
     // Remise a zero de l'agence ou tu es : points = (heures gagnees dans cette agence / divisor) ^ power
     pointsDivisor: 80,
@@ -455,7 +473,7 @@ export const CONFIG = {
     { id: "clients",  tasks: 18, when: (s) => s.stats.tasksDone >= 18 && s.stats.moneyEarned >= 50, who: "nahel", tab: "clients", title: "Nouvel onglet : Clients", text: "Pour trouver des clients, il faut faire de la publicité. Lance une campagne : après quelques secondes, des clients se présentent. La première campagne est offerte. Signe un client : il paie un abonnement tant qu'il est bien servi." },
     { id: "team",     when: (s) => s.stats.clientsSigned >= 1, who: "nahel", tab: "team", title: "Nouvel onglet : Équipe", text: "Chaque client demande du temps de travail et un niveau de compétence. Pour les servir, embauche du monde : lance une campagne de recrutement. Plus ta crédibilité est haute, plus les profils sont forts. Attention, ton bureau limite le nombre d'employés." },
     { id: "workflows", when: (s) => s.stats.moneyEarned >= 160 && s.stats.clientsSigned >= 1, who: "yanis", tab: "workflows", title: "Nouvel onglet : Workflows", text: "On peut automatiser une tâche répétitive. Installe l'automatisation d'un type de tâche : elle se met en place après un délai, puis traite ces tâches toute seule. Tu peux la monter de niveau pour aller plus vite et gérer les tâches plus difficiles." },
-    { id: "difficulty", when: (s) => s.hoursRun >= CONFIG.difficulty.hoursPerStep && s.flags.workflows, who: "yanis", title: "Les tâches deviennent plus dures", text: "Plus tu avances, plus les tâches sont difficiles. À la main, une tâche difficile demande plusieurs étapes. Une automatisation doit passer plusieurs fois dessus, donc elle est plus lente, et son niveau doit être au moins égal à la difficulté, sinon elle ne la traite pas. Il faudra monter tes automatisations." },
+    { id: "difficulty", when: (s) => s.hoursRun >= CONFIG.difficulty.hoursPerStep && s.flags.workflows, who: "yanis", title: "Les tâches deviennent plus dures", text: "Plus tu avances, plus les tâches sont difficiles : chaque palier demande deux fois plus d'heures que le précédent. La difficulté varie d'une tâche à l'autre (jusqu'à 2 niveaux de plus ou de moins que la moyenne, rarement). À la main, une tâche difficile demande plusieurs étapes. Une automatisation doit passer plusieurs fois dessus, donc elle est plus lente, et son niveau doit être au moins égal à la difficulté, sinon elle ne la traite pas. Il faudra monter tes automatisations." },
     { id: "hours",    when: (s) => s.stats.autoDone >= 1, who: "yanis", title: "Nouveau : les heures gagnées", text: "Chaque tâche traitée automatiquement te fait gagner des heures. À la main, tu gagnes seulement de l'argent. Dépense tes heures pour monter tes automatisations. Leur total te rapproche aussi d'une nouvelle agence." },
     { id: "rapport",  tasks: 40, when: (s) => s.stats.tasksDone >= 40, who: "nahel", title: "Nouvelle tâche : le rapport", text: "Des rapports à rédiger : maintiens ton doigt appuyé jusqu'à ce que la barre soit pleine. Ça rapporte bien." },
     { id: "dir_yanis", when: (s) => s.flags.hours && s.stats.autoDone >= 6, who: "yanis", title: "Yanis peut être recruté", text: "Avec moi dans l'équipe, tu peux monter tes automatisations au niveau 5 et plus, et elles vont plus vite. Tous les 5 niveaux, je multiplie par 2 les heures que tu gagnes." },
@@ -480,6 +498,6 @@ export const CONFIG = {
     hours: ["Heures gagnées", "Chaque tâche traitée automatiquement te fait gagner du temps : ce sont les heures gagnées. Tu n'en gagnes pas en traitant à la main. Dépense-les pour monter tes automatisations. Leur total te rapproche aussi de l'ouverture d'une nouvelle agence."],
     stress: ["Stress", "Le stress monte quand trop de tâches s'accumulent dans ta boîte (au-delà de sa capacité) et quand tu fais des erreurs. À partir de 30 %, tous tes gains baissent, jusqu'à -50 % à 100 %. À 100 %, tes clients perdent aussi en satisfaction. Il redescend quand la boîte se vide."],
     satisfaction: ["Satisfaction des clients", "Chaque client a une satisfaction de 0 à 100 %. À 0 %, il résilie son abonnement et ta crédibilité baisse. Elle monte quand le service est bon (temps et compétence couverts à plus de 70 %) et baisse quand le service est insuffisant. Elle baisse aussi quand ses tâches attendent trop longtemps dans ta boîte (plus de 45 s), quand le stress dépasse 70 % (davantage à 100 %), et quand une automatisation bug. Elle monte un peu à chaque tâche traitée, plus si c'est rapide. Sous 50 %, il paie moins. Sur chaque carte client, la ligne « Évolution » te montre ce qui la fait bouger en ce moment."],
-    credibility: ["Crédibilité", "Si tu ne sers pas bien tes clients (pas assez de temps ou de compétence), ta crédibilité baisse. Plus elle est haute, plus les profils proposés par tes campagnes de recrutement sont forts, et plus tu reçois de clients. Trop basse, un client peut t'attaquer en justice."],
+    credibility: ["Crédibilité", "Si tu ne sers pas bien tes clients (pas assez de temps ou de compétence), ta crédibilité baisse. Plus elle est haute, plus les profils proposés par tes campagnes de recrutement sont forts, et plus tu reçois de clients. Même sans publicité, des clients viennent te voir grâce au bouche-à-oreille : environ toutes les 30 s à 100 %, presque jamais à 0 %. Trop basse, un client peut t'attaquer en justice."],
   },
 };
