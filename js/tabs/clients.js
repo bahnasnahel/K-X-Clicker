@@ -1,6 +1,6 @@
 import { el, fmt, fmt1, fmt2, liveView, setText } from "../util.js";
 import { CONFIG } from "../config.js";
-import { state } from "../state.js";
+import { state, securityScore } from "../state.js";
 import { icon } from "../icons.js";
 import { sfx } from "../audio.js";
 import { modal, infoDialog, confirmDialog } from "../modal.js";
@@ -97,8 +97,8 @@ export default {
       const tiers = el("div", "card tiercard");
       tiers.append(el("div", "credhead", "<b>Rangs de clients</b>"));
       Object.entries(CONFIG.sizes).forEach(([k, z]) => {
-        const ok = state.runMoney >= z.minMoney && state.credibility >= z.minCred;
-        tiers.append(el("div", "tierrow " + (ok ? "ok" : "lock"), `<b>${z.label}</b><span>${ok ? "disponible" : `il faut ${fmt(z.minMoney)} EUR gagnés et ${z.minCred} % de crédibilité`}</span>`));
+        const ok = state.runMoney >= z.minMoney && state.credibility >= z.minCred && securityScore() >= z.minSec;
+        tiers.append(el("div", "tierrow " + (ok ? "ok" : "lock"), `<b>${z.label}</b><span>${ok ? "disponible" : `il faut ${fmt(z.minMoney)} EUR gagnés, ${z.minCred} % de crédibilité${z.minSec ? ` et ${z.minSec} de score de sécurité` : ""}`}</span>`));
       });
       r.append(tiers);
 

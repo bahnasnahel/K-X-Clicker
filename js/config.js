@@ -193,13 +193,13 @@ export const CONFIG = {
 
   // PALIERS de clients (rangs) : chaque palier est un enorme saut en paiement, en temps demande et en competence.
   // Dans un meme palier, chaque client a un "profil" (spread) : certains demandent plus et rapportent plus.
-  // minMoney : argent gagne dans l'agence ; minCred : credibilite minimale pour qu'ils se presentent.
+  // minMoney : argent gagne dans l'agence ; minCred : credibilite minimale ; minSec : score de securite minimal pour qu'ils se presentent.
   sizes: {
-    artisan: { label: "Artisan",      pay: 0.3, taskEverySec: 14, timeRange: [4, 12],    skill: [1, 1],  minMoney: 0,     minCred: 0,  weight: 1 },
-    tpe:     { label: "TPE",          pay: 1.4, taskEverySec: 8,  timeRange: [9, 30],    skill: [2, 3],  minMoney: 500,   minCred: 25, weight: 0.9 },
-    pme:     { label: "PME",          pay: 6,   taskEverySec: 5,  timeRange: [20, 70],   skill: [4, 5],  minMoney: 3000,  minCred: 45, weight: 0.6 },
-    eti:     { label: "ETI",          pay: 26,  taskEverySec: 3,  timeRange: [45, 140],  skill: [6, 7],  minMoney: 15000, minCred: 65, weight: 0.35 },
-    groupe:  { label: "Grand groupe", pay: 110, taskEverySec: 2,  timeRange: [90, 280],  skill: [8, 10], minMoney: 60000, minCred: 80, weight: 0.2 },
+    artisan: { label: "Artisan",      pay: 0.3, taskEverySec: 14, timeRange: [4, 12],    skill: [1, 1],  minMoney: 0,     minCred: 0, minSec: 0,  weight: 1 },
+    tpe:     { label: "TPE",          pay: 1.4, taskEverySec: 8,  timeRange: [9, 30],    skill: [2, 3],  minMoney: 500,   minCred: 25, minSec: 10, weight: 0.9 },
+    pme:     { label: "PME",          pay: 6,   taskEverySec: 5,  timeRange: [20, 70],   skill: [4, 5],  minMoney: 3000,  minCred: 45, minSec: 30, weight: 0.6 },
+    eti:     { label: "ETI",          pay: 26,  taskEverySec: 3,  timeRange: [45, 140],  skill: [6, 7],  minMoney: 15000, minCred: 65, minSec: 55, weight: 0.35 },
+    groupe:  { label: "Grand groupe", pay: 110, taskEverySec: 2,  timeRange: [90, 280],  skill: [8, 10], minMoney: 60000, minCred: 80, minSec: 80, weight: 0.2 },
   },
   profileSpread: [0.65, 1.6],   // multiplicateur de profil : paiement x m^1.4, competence +/- 1 aux extremes. Le temps demande suit la meme position dans timeRange.
   higherTierDamp: 0.6,          // chaque palier plus haut deja disponible reduit la part des clients de rang inferieur
@@ -259,9 +259,10 @@ export const CONFIG = {
       recruit: 250, upgrade: { base: 200, growth: 1.5 }, maxLevel: 100,
       eventEverySec: [35, 70], goodBase: 0.3, goodPerLevel: 0.065, goodMax: 0.95 },
     noah: { name: "Noah", role: "Cybersécurité",
-      desc: "Il défend ton système : sa défense affronte la puissance de chaque attaque et en bloque une grande partie. Il réduit aussi le nombre de taps qu'il te reste à faire quand une attaque passe. Sans lui, tu es presque sans défense.",
+      desc: "Il veille sur ton système. Chaque niveau : les attaques arrivent moins souvent, et il en bloque une partie avant même qu'elles ne t'atteignent. Il ne remplace pas ta sécurité : les mesures de l'onglet Sécurité te protègent aussi.",
       recruit: 400, upgrade: { base: 350, growth: 1.5 }, maxLevel: 100,
-      defenseBase: 1, defensePerLevel: 1.2, tapReducePerLevel: 0.05, tapReduceMin: 0.5 },
+      reduceBase: 0.05, reducePerLevel: 0.012, reduceMax: 0.6,    // part des attaques qui n'arrivent jamais (frequence reduite)
+      blockBase: 0.05, blockPerLevel: 0.01, blockMax: 0.6 },      // chance de bloquer une attaque qui arrive
   },
 
   // --- Evenements de la fenetre de Jadd ---
@@ -284,18 +285,58 @@ export const CONFIG = {
     passers: ["oiseau", "avion", "nuage", "ballon"],
   },
 
-  // --- Attaques (visent un type de tache automatise) ---
+  // --- Attaques : quatre sortes, chacune avec sa contre-mesure et une decision ---
+  // Noah (direction) reduit leur frequence et en bloque une partie. Les mesures de securite en bloquent aussi (selon la sorte).
   attacks: {
     startAutoDone: 30,      // taches automatisees avant la premiere attaque (et Noah recrutable)
     everySec: 100,          // delai moyen ; divise par (1 + frequencyPerPower x puissance)
     frequencyPerPower: 0.12,
     powerEveryHours: 70,    // +1 de puissance d'attaque toutes les 70 heures gagnees (+1 par ville)
     powerMax: 9,
-    tapsBase: 4,            // taps pour repousser une attaque de puissance 1...
-    tapsPerPower: 2,        // ...+2 par point de puissance (reduits par Noah)
-    windowSec: 9,           // temps pour repousser
-    pauseSec: 25,           // pause de l'automatisation si l'attaque reussit
-    theftPct: 0.04,         // part de l'argent volee quand une attaque reussit (x puissance, max 40 %)
+    windowSec: 20,          // temps pour decider ; sans decision, c'est l'option par defaut (la pire)
+    // feeMin : cout minimal x puissance ; feeSec : ou secondes de revenu des clients (le plus grand des deux)
+    kinds: {
+      phishing:   { label: "Phishing", weight: 4, measure: "training", fallback: "miss", mails: 4, theftPct: 0.04, pauseSec: 25,
+        intro: "Un employé a reçu des mails suspects. Un seul est un piège : repère-le avant qu'on ne clique." },
+      ddos:       { label: "Attaque DDoS", weight: 3, fallback: "ignore", measure: "firewall", feeMin: 40, feeSec: 20, cutPauseSec: 30, tasksBase: 4, tasksPerPower: 1, stress: 20,
+        intro: "Ton serveur est submergé de requêtes. Choisis comment réagir." },
+      ransomware: { label: "Ransomware", weight: 2, fallback: "rebuild", measure: "backup", feeMin: 120, feeSec: 60, restorePauseSec: 10, rebuildPauseSec: 90,
+        intro: "Une automatisation vient d'être chiffrée et bloquée. Un message réclame une rançon." },
+      leak:       { label: "Fuite de données", weight: 2, fallback: "hush", measure: "encrypt", feeMin: 80, feeSec: 40, warnCred: -4, hushRisk: 0.5, scandalCred: -15, scandalFineMult: 2,
+        intro: "Des données de tes clients ont fuité. Que fais-tu ?" },
+    },
+  },
+
+  // Faux mails du phishing : un piege + des mails normaux
+  phishing: {
+    good: [
+      { from: "compta@atelier-mancel.fr", subject: "Facture de mars à régler" },
+      { from: "m.durand@studio24h.fr", subject: "Compte rendu de notre réunion" },
+      { from: "support@banque-ouest.fr", subject: "Votre relevé mensuel est disponible" },
+      { from: "contact@looply.io", subject: "Question sur le devis n°1042" },
+      { from: "rh@cabinet-lemans.fr", subject: "Planning des congés d'été" },
+      { from: "livraisons@fournisseur-martin.fr", subject: "Bon de livraison joint" },
+    ],
+    bad: [
+      { from: "securite@kx-automatisation.co", subject: "URGENT : votre compte sera suspendu sous 24 h" },
+      { from: "paiement@banque-ouest-secure.com", subject: "Confirmez vos identifiants pour débloquer le virement" },
+      { from: "ceo.direction@gmail.com", subject: "Virement confidentiel à faire tout de suite" },
+      { from: "facture@fourni5seur-martin.fr", subject: "Facture impayée : cliquez ici pour éviter des frais" },
+    ],
+  },
+
+  // --- Securite : mesures permanentes de l'agence (niveau par mesure) ---
+  // Chaque niveau : +pts au score de securite (exige par les gros clients) et +blockPerLevel de chance de bloquer sa sorte d'attaque.
+  // cout du niveau n = base x growth^n EUR
+  security: {
+    measures: [
+      { id: "training", label: "Formation du personnel", kind: "phishing",   desc: "Tes équipes repèrent les faux mails.",                    max: 5, pts: 4, blockPerLevel: 0.08, cost: [120, 2.2] },
+      { id: "firewall", label: "Pare-feu",               kind: "ddos",       desc: "Une partie du trafic malveillant est filtrée.",           max: 5, pts: 4, blockPerLevel: 0.08, cost: [200, 2.2] },
+      { id: "backup",   label: "Sauvegardes",            kind: "ransomware", desc: "Permet de restaurer vite après un ransomware (niveau 1 minimum).", max: 5, pts: 4, blockPerLevel: 0.08, restoreFaster: 0.12, cost: [250, 2.2] },
+      { id: "encrypt",  label: "Chiffrement des données", kind: "leak",      desc: "Des données volées deviennent inexploitables.",           max: 5, pts: 4, blockPerLevel: 0.08, cost: [300, 2.2] },
+      { id: "audit",    label: "Audit de sécurité",      kind: null,         desc: "Un expert certifie ton niveau : points de score, sans protection directe.", max: 5, pts: 4, blockPerLevel: 0, cost: [400, 2.4] },
+    ],
+    blockMax: 0.7,          // plafond de la chance de blocage d'une mesure
   },
 
   // --- Agences : une par ville, qui tournent EN PARALLELE ---
@@ -397,7 +438,8 @@ export const CONFIG = {
     { id: "dir_yanis", when: (s) => s.flags.hours && s.stats.autoDone >= 6, who: "yanis", title: "Yanis peut être recruté", text: "Avec moi dans l'équipe, tu peux monter tes automatisations au niveau 5 et plus, et elles vont plus vite. Tous les 5 niveaux, je multiplie par 2 les heures que tu gagnes." },
     { id: "dir_jadd", when: (s) => s.flags.stress && s.stats.clientsSigned >= 2 && s.stats.moneyEarned >= 400, who: "jadd", title: "Jadd peut être recruté", text: "Je guette la fenêtre. Dès que quelque chose passe, je l'ouvre, et il se passe un truc : parfois une bonne surprise, parfois moins. Plus je monte de niveau, plus je tombe au bon moment." },
     { id: "office",   when: (s) => s.staff.length >= CONFIG.office.levels[Math.min(s.office, CONFIG.office.levels.length - 1)].staff && s.staff.length > 0, who: "nahel", title: "Ton bureau est plein", text: "Tu ne peux pas embaucher plus de monde que ton bureau n'a de places. Améliore le bureau dans l'onglet Équipe : il change aussi d'aspect en haut de l'écran." },
-    { id: "dir_noah", when: (s) => s.stats.autoDone >= CONFIG.attacks.startAutoDone, who: "noah", title: "Noah peut être recruté", text: "Des cyberattaques vont viser tes automatisations, et elles vont devenir de plus en plus puissantes. Sans moi, tu es presque sans défense : une attaque qui passe met l'automatisation en pause et te vole de l'argent. Avec moi, ma défense affronte chaque attaque, et il te reste moins de taps à faire pour les repousser." },
+    { id: "dir_noah", when: (s) => s.stats.autoDone >= CONFIG.attacks.startAutoDone, who: "noah", title: "Noah peut être recruté", text: "Des cyberattaques vont viser tes automatisations : phishing, DDoS, ransomware, fuites de données. Avec moi dans l'équipe, elles arrivent moins souvent et j'en bloque une partie. Celles qui passent, c'est à toi de décider comment réagir." },
+    { id: "security", when: (s) => s.flags.dir_noah, who: "noah", tab: "security", title: "Nouvel onglet : Sécurité", text: "Ton score de sécurité monte avec chaque mesure achetée. Les gros clients en exigent un : sans score suffisant, ils ne se présentent pas. Chaque mesure te protège aussi contre une attaque précise." },
     { id: "agency",   when: (s) => s.hoursRun >= 120, who: "nahel", tab: "agency", title: "Nouvel onglet : Agences", text: "Tu peux remettre ton agence à zéro pour gagner des points, à dépenser dans une boutique de bonus permanents. Tu peux aussi débloquer d'autres agences, très chères, qui tournent en parallèle de la tienne." },
     { id: "success",  when: (s) => Object.keys(s.achievements).length >= 3, tab: "success", who: "nahel", title: "Nouvel onglet : Succès", text: "Tu débloques des succès en jouant. Chacun donne un petit bonus : de l'argent ou des gains permanents." },
     { id: "devis",    when: (s) => s.city >= 1, who: "nahel", title: "Nouvelle tâche : le devis", text: "Au Mans, il y a des devis à valider. Additionne les lignes et tape le bon total." },

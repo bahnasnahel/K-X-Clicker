@@ -5,6 +5,7 @@ import { state, save, freshAgencyFields } from "./state.js";
 import { modal } from "./modal.js";
 import { toast } from "./toast.js";
 import { sfx } from "./audio.js";
+import { launchAttack } from "./security.js";
 
 const SPEEDS = [1, 2, 5, 10, 50];
 const GAINS = [1, 2, 5, 10, 100];
@@ -41,7 +42,7 @@ const ACTIONS = [
   ["Stress à zéro", () => { state.stress = 0; }],
   ["Bureau au maximum", () => { state.office = CONFIG.office.levels.length - 1; }],
   ["Crédibilité à 100 %", () => { state.credibility = 100; }],
-  ["Lancer une attaque", () => { const t = Object.keys(state.auto).find((k) => state.auto[k].level > 0); if (t) state.attack = { type: t, hp: CONFIG.attacks.tapsBase, deadline: state.stats.playSeconds + CONFIG.attacks.windowSec, power: 1 }; else toast("Installe d'abord une automatisation."); }],
+  ...Object.entries(CONFIG.attacks.kinds).map(([k, K]) => [`Lancer : ${K.label}`, () => { if (!launchAttack(k)) toast("Installe une automatisation (et termine l'attaque en cours)."); }]),
 ];
 
 export function openCheat() {

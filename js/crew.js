@@ -1,10 +1,9 @@
-// Direction : recrutement, ameliorations, Jadd (fenetre et evenements), Noah (attaques).
+// Direction : recrutement, ameliorations, Jadd (fenetre et evenements). Noah agit dans security.js.
 import { CONFIG } from "./config.js";
 import { state, shopDiscount } from "./state.js";
 import { addSystem } from "./loop.js";
 import { on } from "./events.js";
 import { sfx } from "./audio.js";
-import { toast } from "./toast.js";
 import { bubble } from "./bubbles.js";
 import { clamp } from "./util.js";
 import { activeTypes, auto } from "./workflows.js";
@@ -39,17 +38,6 @@ export function upgrade(id) {
 
 // ---- effets affiches ----
 export const goodChance = () => Math.min(T.jadd.goodMax, T.jadd.goodBase + T.jadd.goodPerLevel * state.team.jadd.lvl);
-
-// ---- Attaques : la puissance monte avec la progression ; la defense de Noah l'affronte ----
-export const attackPower = () => Math.min(CONFIG.attacks.powerMax, 1 + Math.floor(state.hoursRun / CONFIG.attacks.powerEveryHours) + state.city);
-export const noahDefense = () => (state.team.noah.on ? T.noah.defenseBase + T.noah.defensePerLevel * state.team.noah.lvl : 0);
-export const blockChance = (p = attackPower()) => { const d = noahDefense(); return d ? d / (d + p) : 0; };
-export const noahBlock = () => blockChance();
-const tapsFor = (p) => {
-  const N = T.noah, A = CONFIG.attacks;
-  const red = state.team.noah.on ? Math.max(N.tapReduceMin, 1 - N.tapReducePerLevel * state.team.noah.lvl) : 1;
-  return Math.max(2, Math.round((A.tapsBase + A.tapsPerPower * (p - 1)) * red));
-};
 
 export function jaddTap() {
   const lines = CONFIG.jaddLines;
@@ -89,52 +77,6 @@ function openWindow() {
   bubble("jadd", `<i class="${good ? "good" : "bad"}">${good ? "Bonne surprise" : "Mauvaise surprise"}</i> ${ev.text}`, 6500);
 }
 
-// ---- Attaques ----
-let nextAttack = CONFIG.attacks.everySec * 0.6;
-export function hitAttack() {
-  const a = state.attack;
-  if (!a) return;
-  a.hp--;
-  if (a.hp <= 0) {
-    state.attack = null;
-    state.stats.attacksRepelled++;
-    sfx.ok();
-    if (state.team.noah.on) bubble("noah", "Bien joué. On les a repoussés ensemble.");
-    else toast("Attaque repoussée.");
-  } else sfx.tap();
-}
-
-function attackTick() {
-  const A = CONFIG.attacks, now = state.stats.playSeconds;
-  if (state.attack) {
-    if (now >= state.attack.deadline) {
-      const t = state.attack.type, p = state.attack.power || 1;
-      auto(t).pausedUntil = now + A.pauseSec;
-      const stolen = Math.round(state.money * Math.min(0.4, A.theftPct * p));
-      state.money -= stolen;
-      state.attack = null;
-      sfx.error();
-      toast(`Attaque réussie : « ${CONFIG.tasks[t].label} » est en pause${stolen ? `, ${stolen} EUR volés` : ""}.`);
-      if (state.team.noah.on) bubble("noah", "Celle-là était trop forte. Monte-moi de niveau.");
-    }
-    return;
-  }
-  if (state.stats.autoDone < A.startAutoDone || now < nextAttack) return;
-  const targets = activeTypes();
-  if (!targets.length) return;
-  const p = attackPower();
-  nextAttack = now + (A.everySec / (1 + A.frequencyPerPower * p)) * (0.7 + Math.random() * 0.6);
-  const type = targets[Math.floor(Math.random() * targets.length)];
-  if (Math.random() < blockChance(p)) {
-    state.stats.attacksRepelled++;
-    bubble("noah", `Attaque de puissance ${p} bloquée sur « ${CONFIG.tasks[type].label} ».`);
-    sfx.ok();
-  } else {
-    state.attack = { type, power: p, hp: tapsFor(p), deadline: now + A.windowSec };
-    sfx.alert();
-  }
-}
-
 function tick(dt) {
   // Jadd
   if (state.team.jadd.on) {
@@ -155,13 +97,11 @@ function tick(dt) {
     deskFx.windowOpen = x >= 1 ? 0 : Math.min(1, Math.min(x, 1 - x) * 4);
     if (x >= 1) winT = -1;
   }
-  attackTick();
 }
 
-on("agencyReset", () => { nextAttack = CONFIG.attacks.everySec * 0.6 + state.stats.playSeconds; winT = -1; pass = null; deskFx.windowOpen = 0; deskFx.passer = null; });
+on("agencyReset", () => { winT = -1; pass = null; deskFx.windowOpen = 0; deskFx.passer = null; });
 
 export function initCrew() {
   eventIn = nextEventIn();
-  nextAttack = state.stats.playSeconds + CONFIG.attacks.everySec * 0.6;
   addSystem(tick);
 }

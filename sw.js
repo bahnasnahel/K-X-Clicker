@@ -1,6 +1,6 @@
 // Service worker K'X Clicker : jeu complet hors ligne.
 // A CHAQUE MISE EN LIGNE, incremente VERSION pour forcer la mise a jour.
-const VERSION = "v10-0002";
+const VERSION = "v10-0003";
 const CACHE = "kx-" + VERSION;
 
 const FILES = [
@@ -8,8 +8,8 @@ const FILES = [
   "css/style.css",
   "js/main.js", "js/config.js", "js/util.js", "js/state.js", "js/loop.js", "js/audio.js", "js/events.js", "js/modal.js",
   "js/icons.js", "js/render.js", "js/ui.js", "js/toast.js", "js/bubbles.js", "js/tutorial.js", "js/offline.js", "js/cheat.js", "js/data.js", "js/unlocks.js", "js/staff.js", "js/lawsuit.js", "js/avatar.js", "js/ads.js",
-  "js/taskdata.js", "js/tasks.js", "js/workflows.js", "js/clients.js", "js/crew.js", "js/shop.js", "js/agencies.js", "js/achievements.js",
-  "js/tabs/tasks.js", "js/tabs/workflows.js", "js/tabs/clients.js", "js/tabs/team.js", "js/tabs/agency.js", "js/tabs/success.js",
+  "js/taskdata.js", "js/tasks.js", "js/workflows.js", "js/clients.js", "js/crew.js", "js/security.js", "js/shop.js", "js/agencies.js", "js/achievements.js",
+  "js/tabs/tasks.js", "js/tabs/workflows.js", "js/tabs/clients.js", "js/tabs/team.js", "js/tabs/security.js", "js/tabs/agency.js", "js/tabs/success.js",
   "data/employees.json", "data/directors.json", "data/photos.json", "data/names.json",
   "assets/photos/people/p1.webp", "assets/photos/people/p2.webp", "assets/photos/people/p3.webp", "assets/photos/people/p4.webp",
   "assets/fonts/press-start-2p.woff2", "assets/fonts/inter.woff2",

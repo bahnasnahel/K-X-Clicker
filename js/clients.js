@@ -1,6 +1,6 @@
 // Clients : demandes, signature, abonnements, service rendu, satisfaction, credibilite.
 import { CONFIG } from "./config.js";
-import { state, earn, gainMult, noteFlow, shopPct, shopDiscount } from "./state.js";
+import { state, earn, gainMult, noteFlow, shopPct, shopDiscount, securityScore } from "./state.js";
 import { addSystem } from "./loop.js";
 import { on, emit } from "./events.js";
 import { sfx } from "./audio.js";
@@ -41,7 +41,7 @@ export function makeOffer() {
   const boost = 1 + state.city * 0.4;
   const entries = Object.entries(CONFIG.sizes);
   const rk = state.shop.clientRanks || 0;                       // boutique : rangs plus tot
-  const avail = entries.filter(([, z]) => state.runMoney >= z.minMoney * shopDiscount("clientRanks") && state.credibility >= z.minCred - 3 * rk);
+  const avail = entries.filter(([, z]) => state.runMoney >= z.minMoney * shopDiscount("clientRanks") && state.credibility >= z.minCred - 3 * rk && securityScore() >= z.minSec);
   const topIdx = Math.max(...avail.map(([k]) => entries.findIndex(([x]) => x === k)));
   const weights = avail.map(([k, z]) => {
     const idx = entries.findIndex(([x]) => x === k);

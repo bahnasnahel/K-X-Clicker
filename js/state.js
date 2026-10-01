@@ -4,7 +4,7 @@ import { CONFIG } from "./config.js";
 // Tout le reste (points, boutique, succes, statistiques, explications) est commun a l'entreprise.
 // L'argent est propre a chaque agence ; il n'est commun que pour ACHETER une nouvelle agence.
 export const AGENCY_FIELDS = ["money", "hoursSaved", "hoursRun", "runMoney", "stress", "credibility", "queue", "offers", "clients", "auto",
-  "staff", "assign", "autoAssign", "office", "ads", "candidates", "people", "photos", "attack", "team", "freeAds"];
+  "staff", "assign", "autoAssign", "office", "ads", "candidates", "people", "photos", "attack", "sec", "team", "freeAds"];
 
 const shopLvl = (st, id) => (st.shop && st.shop[id]) || 0;
 
@@ -34,7 +34,8 @@ export function freshAgencyFields(city, st = state) {
     candidates: [],       // profils proposes par les campagnes de recrutement
     people: {},           // profils generes
     photos: {},           // cle (client ou employe) -> photo, sans doublon
-    attack: null,
+    attack: null,         // incident de securite en cours : { kind, type, power, deadline, ... }
+    sec: {},              // mesures de securite : id -> niveau
     freeAds: { client: lvl("freeAds"), recruit: lvl("freeAds") },   // campagnes gratuites restantes
     team: {
       nahel: { on: true,  lvl: dir },
@@ -89,7 +90,8 @@ function assign(target, src) {
   }
 }
 
-export function normalize() {}
+// Ancien format d'attaque (a taper) : on l'abandonne.
+export function normalize() { if (state.attack && !state.attack.kind) state.attack = null; if (!state.sec) state.sec = {}; }
 
 export function load() {
   try {
@@ -184,6 +186,9 @@ export function earn(euro, hours, extra = 1, hoursExtra = 1) {
 
 // Rythme de l'agence active (sans les tâches à la main) : sert à faire tourner les autres agences.
 export function noteFlow(euro, hours) { state.flow.accE += euro; state.flow.accH += hours; }
+
+// Score de securite (0 a 100) : somme des points des mesures achetees dans l'agence. Les gros clients en exigent un.
+export const securityScore = () => Math.min(100, CONFIG.security.measures.reduce((s, m) => s + m.pts * ((state.sec && state.sec[m.id]) || 0), 0));
 
 export const office = () => CONFIG.office.levels[Math.min(state.office, CONFIG.office.levels.length - 1)];
 export const staffCap = () => office().staff;

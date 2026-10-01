@@ -5,7 +5,7 @@ import { icon } from "./icons.js";
 import { sfx } from "./audio.js";
 import { setMuted } from "./audio.js";
 import { modal, confirmDialog, infoDialog } from "./modal.js";
-import { hitAttack } from "./crew.js";
+import { openIncident } from "./security.js";
 import { startTutorial } from "./tutorial.js";
 import { openCheat, cheatActive, cheatLabel } from "./cheat.js";
 import { stressMult } from "./state.js";
@@ -14,9 +14,10 @@ import workflows from "./tabs/workflows.js";
 import clients from "./tabs/clients.js";
 import team from "./tabs/team.js";
 import agency from "./tabs/agency.js";
+import security from "./tabs/security.js";
 import success from "./tabs/success.js";
 
-const tabs = [tasks, clients, team, workflows, agency, success];
+const tabs = [tasks, clients, team, workflows, security, agency, success];
 const isVisible = (t) => t.id === "tasks" || !!state.flags[t.id];
 let current = "tasks";
 const panels = {}, buttons = {};
@@ -52,7 +53,7 @@ export function initUI() {
 
   // alerte d'attaque (visible depuis tous les onglets)
   const al = el("button", "alert hidden", `<b>ATTAQUE</b><span class="atxt"></span><i class="abar"><b></b></i>`);
-  al.onclick = () => hitAttack();
+  al.onclick = () => openIncident();
   al.addEventListener("pointerdown", (e) => e.preventDefault());
   document.body.append(al);
   ui.alert = al;
@@ -120,7 +121,8 @@ export function updateUI() {
   const a = state.attack;
   ui.alert.classList.toggle("hidden", !a);
   if (a) {
-    set("atk", ui.alert.querySelector(".atxt"), `${CONFIG.tasks[a.type].label} · puissance ${a.power || 1} : tape pour repousser (${a.hp})`);
+    const K = CONFIG.attacks.kinds[a.kind];
+    set("atk", ui.alert.querySelector(".atxt"), `${K.label}${a.kind === "leak" ? "" : " · " + CONFIG.tasks[a.type].label} : tape pour réagir`);
     ui.alert.querySelector(".abar b").style.width = Math.max(0, ((a.deadline - state.stats.playSeconds) / CONFIG.attacks.windowSec) * 100) + "%";
   }
 }

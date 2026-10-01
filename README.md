@@ -32,7 +32,7 @@ Repères : seuil d'ouverture d'une agence dans `prestige.thresholds` (heures gag
 vitesse des workflows dans `workflow` et `blocks`, coûts de l'équipe dans `team`.
 
 ## Mode triche
-Réglages (engrenage) > « Mode triche (tests) » : vitesse du jeu x1 à x50, multiplicateur de gains x1 à x100, raccourcis (+1 000 EUR, +100 h, agence suivante prête, équipe recrutée, stress à zéro, attaque). Une pastille rouge « TRICHE » s'affiche en haut à gauche du bureau tant qu'un réglage est actif (tape-la pour rouvrir le panneau). Les réglages sont sauvegardés : remets x1 pour jouer normalement.
+Réglages (engrenage) > « Mode triche (tests) » : vitesse du jeu x1 à x50, multiplicateur de gains x1 à x100, raccourcis (+1 000 EUR, +100 h, agence suivante prête, équipe recrutée, stress à zéro, lancer chaque sorte d'attaque). Une pastille rouge « TRICHE » s'affiche en haut à gauche du bureau tant qu'un réglage est actif (tape-la pour rouvrir le panneau). Les réglages sont sauvegardés : remets x1 pour jouer normalement.
 
 ## Mode test (console)
 Ajoute `?debug` à l'adresse : `window.kx` donne accès à `state`, `CONFIG` et `runSystems(dt)` dans la console
@@ -45,6 +45,6 @@ Ajoute `?debug` à l'adresse : `window.kx` donne accès à `state`, `CONFIG` et 
 - `js/clients.js` demandes, abonnements, service, crédibilité, `js/lawsuit.js` procès, `js/offline.js` gains hors ligne
 - `js/staff.js` employés, bureau, temps et compétence, affectation, salaires, `js/ads.js` publicité (clients et recrutement), `js/avatar.js` photos sans doublon, `js/data.js` chargement de `data/`
 - `js/unlocks.js` progression : onglets et contenus qui apparaissent au fur et à mesure, avec explication (jeu en pause) ; `js/tutorial.js` les bulles d'explication
-- `js/crew.js` directeurs, Jadd (événements de la fenêtre), attaques, `js/agencies.js` agences en parallèle et remise à zéro, `js/shop.js` boutique permanente, `js/achievements.js` succès
+- `js/crew.js` directeurs, Jadd (événements de la fenêtre), `js/security.js` sécurité (mesures, score, attaques avec décision, effets de Noah), `js/tabs/security.js` onglet Sécurité, `js/agencies.js` agences en parallèle et remise à zéro, `js/shop.js` boutique permanente, `js/achievements.js` succès
 - `js/render.js` bureau pixel (canvas), `js/ui.js` interface, `js/bubbles.js` + `js/tutorial.js` bulles avec photos, `js/audio.js` sons
 - `js/events.js` bus d'événements entre modules (ajouter une ville ou un événement ne demande pas de toucher aux autres)
