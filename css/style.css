@@ -312,3 +312,15 @@ body.notabs #bubbles,body.notabs .alert{bottom:calc(14px + env(safe-area-inset-b
 .client>.frame,.offer>.frame{width:52px;height:52px}
 .tuto{max-height:70dvh;overflow-y:auto}
 .float.step{font-size:10px;color:var(--l)}
+
+/* ---- clients : evolution, rangs, boutons ---- */
+.evol{font-size:12px;line-height:1.4;opacity:.9}
+.evol.up{color:var(--l)} .evol.down{color:var(--m)} .evol.crit{color:#ff7a93;font-weight:700}
+.tiercard{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+.tierrow{display:flex;justify-content:space-between;gap:10px;font-size:12px;line-height:1.35}
+.tierrow b{font-size:13px;flex:none} .tierrow span{text-align:right;opacity:.85}
+.tierrow.lock b{opacity:.55} .tierrow.ok b{color:var(--l)}
+.qhead .helpbtn{margin:-10px 0 -10px 4px}
+.person .acts .btn+.btn{margin-top:6px}
+.howcard{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.howcard p{margin:0;font-size:13px;line-height:1.5}

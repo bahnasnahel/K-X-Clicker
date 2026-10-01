@@ -14,7 +14,7 @@ export const canOpen = () => state.hoursRun >= threshold();
 export const repGain = () => Math.max(1, Math.floor(state.hoursRun / P.repPerHours));
 
 // on garde : direction (Nahel, Yanis, Jadd, Noah), succes, deblocages, reputation
-const RESET = ["money", "hoursSaved", "hoursRun", "runMoney", "stress", "queue", "offers", "clients", "auto", "staff", "assign", "office", "ads", "candidates", "photos", "attack", "credibility"];
+const RESET = ["money", "hoursSaved", "hoursRun", "runMoney", "stress", "queue", "offers", "clients", "auto", "staff", "assign", "office", "ads", "candidates", "people", "photos", "attack", "credibility"];
 
 export function openAgency() {
   if (!canOpen()) return false;

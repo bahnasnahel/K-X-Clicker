@@ -5,7 +5,7 @@ import { addSystem } from "./loop.js";
 import { on } from "./events.js";
 import { sfx } from "./audio.js";
 import { toast } from "./toast.js";
-import { DATA } from "./data.js";
+import { DATA, getEmp } from "./data.js";
 
 const S = CONFIG.staff;
 const O = CONFIG.office;
@@ -25,11 +25,11 @@ export const nahelStat = () => directorStat("nahel");
 export function staffList() {
   const out = [directorStat("nahel")];
   for (const id of ["yanis", "jadd", "noah"]) if (state.team[id].on) out.push(directorStat(id));
-  for (const id of state.staff) { const e = DATA.byId[id]; if (e) out.push({ ...e, title: e.titre }); }
+  for (const id of state.staff) { const e = getEmp(id); if (e) out.push({ ...e, title: e.titre }); }
   return out;
 }
 export const findStaff = (id) => staffList().find((p) => p.id === id);
-export const payroll = () => state.staff.reduce((s, id) => s + (DATA.byId[id] ? DATA.byId[id].salary : 0), 0);
+export const payroll = () => state.staff.reduce((s, id) => s + (getEmp(id) ? getEmp(id).salary : 0), 0);
 export const maxStaff = () => staffCap();
 
 // ---- service rendu a un client ----
@@ -146,10 +146,10 @@ export const refreshAssign = () => { if (state.autoAssign) autoAssign(); };
 
 // ---- embauche : les profils viennent des campagnes de recrutement ----
 export const isHired = (id) => state.staff.includes(id);
-export const candidates = () => state.candidates.map((id) => DATA.byId[id]).filter(Boolean);
+export const candidates = () => state.candidates.map((id) => getEmp(id)).filter(Boolean);
 
 export function hire(id) {
-  const e = DATA.byId[id];
+  const e = getEmp(id);
   if (!e || isHired(id) || !state.candidates.includes(id) || state.money < e.hire || state.staff.length >= maxStaff()) return false;
   state.money -= e.hire;
   state.staff.push(id);

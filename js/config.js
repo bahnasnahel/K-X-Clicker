@@ -132,6 +132,17 @@ export const CONFIG = {
       maxPending: 6,
       // credibilite minimale pour voir des profils de niveau 1, 2, 3, 4, 5
       tierCred: [0, 20, 40, 60, 80],
+      luckyChance: 0.12,        // chance qu'un profil soit un niveau AU-DESSUS de ce que permet la credibilite
+      targetedMult: 3,          // campagne ciblee : cout x3 et profils jusqu'a un niveau de plus
+      namedShare: 0.35,         // part des profils tires de data/employees.json (profils "nommes") ; le reste est genere
+      // profils generes, par niveau (1 a 5) : plages [min, max] ; un meme tirage place le profil dans toutes les plages
+      generator: [
+        { time: [3, 6],   skill: [1, 1],  hire: [10, 50],     salary: [0.01, 0.07] },
+        { time: [6, 11],  skill: [2, 3],  hire: [70, 300],    salary: [0.08, 0.32] },
+        { time: [9, 15],  skill: [3, 5],  hire: [250, 950],   salary: [0.25, 1.0] },
+        { time: [12, 20], skill: [6, 8],  hire: [1000, 4200], salary: [1, 3.6] },
+        { time: [16, 32], skill: [8, 10], hire: [5000, 26000], salary: [4, 15] },
+      ],
     },
   },
 
@@ -177,6 +188,7 @@ export const CONFIG = {
     stressMaxPerSec: -0.6,      // stress au maximum
     stressHighPerSec: -0.1,
     serviceGain: 0.4,           // (service - 0.7) x ceci, par seconde
+    terminateCred: -3,          // arreter un contrat toi-meme coute un peu de credibilite
   },
 
   // PALIERS de clients (rangs) : chaque palier est un enorme saut en paiement, en temps demande et en competence.
@@ -194,15 +206,15 @@ export const CONFIG = {
   cityNeedBonus: { time: 0.1, skill: 0 },    // par ville : +10 % de temps demande
 
   sectors: {
-    boulangerie: { label: "Boulangerie",        city: 0, minMoney: 0,    tasks: ["facture", "relance"], names: ["Boulangerie Martin", "Le Fournil d'Anna", "Pains & Co", "Maison Gaudin"] },
-    garage:      { label: "Garage",             city: 0, minMoney: 0,    tasks: ["facture", "relance", "excel"], names: ["Garage Dupont", "Auto Service 16", "Carrosserie Moreau", "Garage des Lilas"] },
-    btp:         { label: "Artisan BTP",        city: 0, minMoney: 400,  tasks: ["facture", "excel", "rapport"], names: ["Menuiserie Roy", "Maçonnerie Bernard", "Toitures Faure", "Électricité Garnier"] },
-    avocat:      { label: "Cabinet d'avocat",   city: 0, minMoney: 1000, tasks: ["relance", "rapport", "excel"], names: ["Cabinet Lefèvre", "Maître Vidal", "Cabinet Roche", "Avocats Delmas"] },
-    logistique:  { label: "PME logistique",     city: 0, minMoney: 2000, tasks: ["excel", "rapport", "facture"], names: ["Transports Morel", "Logi16", "Express Charente", "Fret Atlantique"] },
-    immo:        { label: "Agence immobilière", city: 1, minMoney: 0,    tasks: ["devis", "relance", "rapport"], names: ["Immo Sarthe", "Maison & Cie", "Cénomans Immobilier", "Pierre Blanche"] },
-    archi:       { label: "Cabinet d'architectes", city: 1, minMoney: 0, tasks: ["devis", "excel", "rapport"], names: ["Atelier Mancel", "Studio 24h", "Archi Loir", "Cabinet Lemans"] },
-    saas:        { label: "Start-up SaaS",      city: 2, minMoney: 0,    tasks: ["contrat", "rapport", "excel"], names: ["Looply", "Nuagix", "Kodex", "Pixelmind"] },
-    agence:      { label: "Agence de communication", city: 2, minMoney: 0, tasks: ["contrat", "devis", "relance"], names: ["Studio Rive", "Agence Volt", "Plume & Pixel", "Maison Ouest"] },
+    boulangerie: { label: "Boulangerie", prefix: "Boulangerie",        city: 0, minMoney: 0,    tasks: ["facture", "relance"], names: ["Boulangerie Martin", "Le Fournil d'Anna", "Pains & Co", "Maison Gaudin"] },
+    garage:      { label: "Garage", prefix: "Garage",             city: 0, minMoney: 0,    tasks: ["facture", "relance", "excel"], names: ["Garage Dupont", "Auto Service 16", "Carrosserie Moreau", "Garage des Lilas"] },
+    btp:         { label: "Artisan BTP", prefix: "Entreprise",        city: 0, minMoney: 400,  tasks: ["facture", "excel", "rapport"], names: ["Menuiserie Roy", "Maçonnerie Bernard", "Toitures Faure", "Électricité Garnier"] },
+    avocat:      { label: "Cabinet d'avocat", prefix: "Cabinet",   city: 0, minMoney: 1000, tasks: ["relance", "rapport", "excel"], names: ["Cabinet Lefèvre", "Maître Vidal", "Cabinet Roche", "Avocats Delmas"] },
+    logistique:  { label: "PME logistique", prefix: "Transports",     city: 0, minMoney: 2000, tasks: ["excel", "rapport", "facture"], names: ["Transports Morel", "Logi16", "Express Charente", "Fret Atlantique"] },
+    immo:        { label: "Agence immobilière", prefix: "Immo", city: 1, minMoney: 0,    tasks: ["devis", "relance", "rapport"], names: ["Immo Sarthe", "Maison & Cie", "Cénomans Immobilier", "Pierre Blanche"] },
+    archi:       { label: "Cabinet d'architectes", prefix: "Atelier", city: 1, minMoney: 0, tasks: ["devis", "excel", "rapport"], names: ["Atelier Mancel", "Studio 24h", "Archi Loir", "Cabinet Lemans"] },
+    saas:        { label: "Start-up SaaS", prefix: "",      city: 2, minMoney: 0,    tasks: ["contrat", "rapport", "excel"], names: ["Looply", "Nuagix", "Kodex", "Pixelmind"] },
+    agence:      { label: "Agence de communication", prefix: "Agence", city: 2, minMoney: 0, tasks: ["contrat", "devis", "relance"], names: ["Studio Rive", "Agence Volt", "Plume & Pixel", "Maison Ouest"] },
   },
 
   // --- Credibilite et proces ---
@@ -236,19 +248,19 @@ export const CONFIG = {
   team: {
     nahel: { name: "Nahel", role: "Fondateur, sur le terrain",
       desc: "C'est toi. Chaque niveau : +10 % de gains d'argent. Tous les 5 niveaux : un gros boost x1,5. Tu apportes aussi du temps et de la compétence pour servir les clients.",
-      recruit: 0, upgrade: { base: 25, growth: 1.7 }, maxLevel: 10,
+      recruit: 0, upgrade: { base: 25, growth: 1.45 }, maxLevel: 100,
       moneyPerLevel: 0.10, bigBoostEvery: 5, bigBoost: 1.5, holdFaster: 0.05, holdMin: 0.5 },
     yanis: { name: "Yanis", role: "Fondateur tech",
       desc: "Chaque niveau : +20 % de vitesse d'automatisation. Tous les 5 niveaux : x1,5 sur les heures gagnées par l'automatisation. Nécessaire pour les automatisations de niveau 5 et plus.",
-      recruit: 120, upgrade: { base: 150, growth: 1.8 }, maxLevel: 10,
+      recruit: 120, upgrade: { base: 150, growth: 1.5 }, maxLevel: 100,
       speedBonus: 0.2, hoursEvery: 5, hoursBoost: 1.5 },
     jadd: { name: "Jadd Barnas", role: "Ingénieur ouvreur de fenêtres",
       desc: "Il guette la fenêtre et l'ouvre dès que quelque chose passe. À chaque ouverture, un événement arrive. Plus il monte de niveau, plus il ouvre au bon moment (événements positifs).",
-      recruit: 250, upgrade: { base: 200, growth: 1.8 }, maxLevel: 10,
+      recruit: 250, upgrade: { base: 200, growth: 1.5 }, maxLevel: 100,
       eventEverySec: [35, 70], goodBase: 0.3, goodPerLevel: 0.065, goodMax: 0.95 },
     noah: { name: "Noah", role: "Cybersécurité",
       desc: "Il défend ton système : sa défense affronte la puissance de chaque attaque et en bloque une grande partie. Il réduit aussi le nombre de taps qu'il te reste à faire quand une attaque passe. Sans lui, tu es presque sans défense.",
-      recruit: 400, upgrade: { base: 350, growth: 1.8 }, maxLevel: 10,
+      recruit: 400, upgrade: { base: 350, growth: 1.5 }, maxLevel: 100,
       defenseBase: 1, defensePerLevel: 1.2, tapReducePerLevel: 0.05, tapReduceMin: 0.5 },
   },
 
@@ -375,6 +387,7 @@ export const CONFIG = {
     money: ["Argent", "Tu gagnes des euros en traitant des tâches à la main, avec les abonnements de tes clients et avec tes automatisations. Tu les dépenses pour la publicité, les employés, le bureau, les automatisations et les directeurs."],
     hours: ["Heures gagnées", "Chaque tâche traitée automatiquement te fait gagner du temps : ce sont les heures gagnées. Tu n'en gagnes pas en traitant à la main. Dépense-les pour monter tes automatisations. Leur total te rapproche aussi de l'ouverture d'une nouvelle agence."],
     stress: ["Stress", "Le stress monte quand trop de tâches s'accumulent dans ta boîte (au-delà de sa capacité) et quand tu fais des erreurs. À partir de 30 %, tous tes gains baissent, jusqu'à -50 % à 100 %. À 100 %, tes clients perdent aussi en satisfaction. Il redescend quand la boîte se vide."],
+    satisfaction: ["Satisfaction des clients", "Chaque client a une satisfaction de 0 à 100 %. À 0 %, il résilie son abonnement et ta crédibilité baisse. Elle monte quand le service est bon (temps et compétence couverts à plus de 70 %) et baisse quand le service est insuffisant. Elle baisse aussi quand ses tâches attendent trop longtemps dans ta boîte (plus de 45 s), quand le stress dépasse 70 % (davantage à 100 %), et quand une automatisation bug. Elle monte un peu à chaque tâche traitée, plus si c'est rapide. Sous 50 %, il paie moins. Sur chaque carte client, la ligne « Évolution » te montre ce qui la fait bouger en ce moment."],
     credibility: ["Crédibilité", "Si tu ne sers pas bien tes clients (pas assez de temps ou de compétence), ta crédibilité baisse. Plus elle est haute, plus les profils proposés par tes campagnes de recrutement sont forts, et plus tu reçois de clients. Trop basse, un client peut t'attaquer en justice."],
   },
 };

@@ -10,7 +10,7 @@ export default {
   id: "agency", label: "Agence", icon: "agency",
   badge: () => canOpen(),
   mount(root) {
-    this.view = liveView(root, () => JSON.stringify([state.city, canOpen(), state.reputation]), (r, live) => {
+    this.view = liveView(root, () => JSON.stringify([state.city, canOpen(), state.reputation, repGain()]), (r, live) => {
       r.append(el("h2", "h", "Agence"));
       r.append(el("div", "card citycard", `<b>K'X ${cityName()}</b><span class="kind">Réputation ${state.reputation} · gains +${Math.round((gainMult() - 1) * 100)} %</span>`));
 
@@ -25,15 +25,22 @@ export default {
       });
       r.append(prog);
 
-      r.append(el("p", "muted", isLastCity()
-        ? "Paris est la dernière ville de la V1. Tu peux la rouvrir pour gagner de la réputation. D'autres villes arriveront plus tard."
-        : P.news[nextCity()]));
-      r.append(el("p", "muted", `On repart de zéro (clients, employés, automatisations, argent). On garde la direction, les succès et la réputation. Réputation gagnée en ouvrant maintenant : +${repGain()}. Chaque point : +${Math.round(P.repBonus * 100)} % de gains, clients plus gros et plus rapides.`));
+      // explication complete, avec les vrais chiffres
+      const gain = repGain(), bonusNow = Math.round(state.reputation * P.repBonus * 100), bonusAfter = Math.round((state.reputation + gain) * P.repBonus * 100);
+      const how = el("div", "card howcard");
+      how.innerHTML = `<div class="credhead"><b>Comment ça marche ?</b></div>
+        <p><b>1. Le but.</b> Les heures gagnées (qui viennent de tes automatisations) mesurent la progression de ton agence. Quand la barre ci-dessus est pleine, tu peux ouvrir K'X ${isLastCity() ? "à nouveau à " + cityName() : "dans la ville suivante : " + cityName(nextCity())}.</p>
+        <p><b>2. Ce que tu perds.</b> Tu repars de zéro : argent, clients, employés, bureau, automatisations, stress, crédibilité.</p>
+        <p><b>3. Ce que tu gardes.</b> Nahel, Yanis, Jadd et Noah avec leurs niveaux, tes succès, les explications déjà débloquées et ta <b>réputation</b>.</p>
+        <p><b>4. La réputation, c'est quoi ?</b> Ce sont des points permanents. Tu en gagnes en ouvrant une agence : <b>heures gagnées ÷ ${P.repPerHours}</b>, au minimum 1. Aujourd'hui : <b>+${gain} point${gain > 1 ? "s" : ""}</b>.</p>
+        <p><b>5. Ce qu'elle donne.</b> Chaque point = <b>+${Math.round(P.repBonus * 100)} % de gains</b> sur tout (tâches, abonnements, automatisations), des demandes de clients plus fréquentes et des clients plus gros. Ton bonus passerait de <b>+${bonusNow} %</b> à <b>+${bonusAfter} %</b>.</p>
+        <p><b>6. Nouvelle ville.</b> De nouveaux types de tâches et de secteurs arrivent, mais les tâches sont plus difficiles dès le départ. ${isLastCity() ? "Paris est la dernière ville de cette version : tu peux la rouvrir pour gagner encore de la réputation." : P.news[nextCity()]}</p>`;
+      r.append(how);
 
       const b = el("button", "btn big", isLastCity() ? "Rouvrir l'agence" : `Ouvrir K'X ${cityName(nextCity())}`);
       b.disabled = !canOpen();
       b.onclick = async () => {
-        const ok = await confirmDialog("Ouvrir une nouvelle agence ?", `Tes clients, workflows et ton argent seront remis à zéro. Tu gagnes +${repGain()} de réputation.`, "Ouvrir");
+        const ok = await confirmDialog("Ouvrir une nouvelle agence ?", `Tu perds : argent, clients, employés, bureau et automatisations. Tu gardes : la direction, les succès et la réputation. Tu gagnes +${repGain()} point${repGain() > 1 ? "s" : ""} de réputation, soit +${Math.round(repGain() * P.repBonus * 100)} % de gains en plus.`, "Ouvrir");
         if (ok) openAgency();
       };
       r.append(b);

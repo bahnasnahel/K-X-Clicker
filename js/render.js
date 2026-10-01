@@ -1,7 +1,7 @@
 // Bureau K'X en pixel art (canvas basse resolution, agrandi sans lissage).
 // Il change avec le niveau du bureau (state.office) et montre l'equipe (state.staff).
 import { state } from "./state.js";
-import { DATA } from "./data.js";
+import { getEmp } from "./data.js";
 
 const W = 160, H = 72;
 const C = {
@@ -127,7 +127,7 @@ export function draw(t) {
 
   // l'equipe : un petit personnage par employe (couleur = niveau du profil)
   const n = Math.min(state.staff.length, 10);
-  for (let i = 0; i < n; i++) { const e = DATA.byId[state.staff[i]]; person(40 + i * 11, 56, TIER[(e ? e.tier : 1) - 1]); }
+  for (let i = 0; i < n; i++) { const e = getEmp(state.staff[i]); person(40 + i * 11, 56, TIER[(e ? e.tier : 1) - 1]); }
 
   if (state.team.jadd.on) jadd(open);
 }

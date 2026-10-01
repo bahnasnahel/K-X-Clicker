@@ -7,7 +7,7 @@ import { portrait, activePerson } from "../bubbles.js";
 import { avatar } from "../avatar.js";
 import { recruit, upgrade, upgradeCost, isVisible, jaddTap, goodChance, noahDefense, blockChance, attackPower } from "../crew.js";
 import { staffList, directorStat, candidates, hire, fire, maxStaff, officeMax, nextOffice, officeCost, upgradeOffice } from "../staff.js";
-import { recruitAdCost, canRecruitAd, launchRecruitAd, adRunning, adLeft, dismissCandidate, maxTier } from "../ads.js";
+import { recruitAdCost, canRecruitAd, launchRecruitAd, adRunning, adLeft, dismissCandidate, maxTier, nextTier } from "../ads.js";
 
 const T = CONFIG.team;
 const pct = (v) => Math.round(v * 100);
@@ -34,7 +34,7 @@ export default {
     const sig = () => JSON.stringify([
       Object.keys(T).map((id) => [state.team[id].on, state.team[id].lvl, isVisible(id), state.money >= (state.team[id].on ? upgradeCost(id) : T[id].recruit)]),
       state.staff, state.assign, state.clients.map((c) => c.id), state.candidates, candidates().map((e) => state.money >= e.hire),
-      state.city, state.office, state.money >= officeCost(), adRunning("recruit"), canRecruitAd(), recruitAdCost(),
+      state.city, state.office, state.money >= officeCost(), adRunning("recruit"), canRecruitAd(), canRecruitAd(true), recruitAdCost(), maxTier(),
     ]);
     this.cards = {};
     this.view = liveView(root, sig, (r, live) => {
@@ -86,11 +86,19 @@ export default {
       // recrutement par campagne
       r.append(el("p", "qlabel", "Recrutement"));
       const ad = el("div", "card adcard");
-      ad.innerHTML = `<div class="cinfo"><b>Campagne de recrutement</b><span class="sdesc">Des profils se présentent. Avec ta crédibilité actuelle, tu peux attirer jusqu'au niveau ${maxTier()} sur 5.</span><i class="bar adbar"><b></b></i><span class="satline adline"></span></div>`;
+      const nt = nextTier(), T0 = CONFIG.ads.recruit;
+      ad.innerHTML = `<div class="cinfo"><b>Campagne de recrutement</b>
+        <span class="sdesc">Avec ta crédibilité (${Math.round(state.credibility)} %), tu attires des profils jusqu'au <b>niveau ${maxTier()} sur 5</b>${nt ? `. Le niveau ${nt.tier} demande ${nt.cred} % de crédibilité` : ""}. Les profils sont différents à chaque campagne.</span>
+        <span class="sdesc">Campagne ciblée : coûte ${T0.targetedMult} fois plus et cherche un niveau au-dessus.</span>
+        <i class="bar adbar"><b></b></i><span class="satline adline"></span></div>`;
+      const abtns = el("span", "btncol");
       const ab = el("button", "btn small-btn", `Campagne<br><small>${fmt(recruitAdCost())} EUR</small>`);
       ab.disabled = !canRecruitAd();
-      ab.onclick = () => launchRecruitAd();
-      ad.append(ab);
+      ab.onclick = () => launchRecruitAd(false);
+      const at = el("button", "btn small-btn ghost", `Ciblée<br><small>${fmt(recruitAdCost(true))} EUR</small>`);
+      at.disabled = !canRecruitAd(true);
+      at.onclick = () => launchRecruitAd(true);
+      abtns.append(ab, at); ad.append(abtns);
       const abar = ad.querySelector(".adbar b"), aline = ad.querySelector(".adline");
       live(() => {
         if (adRunning("recruit")) { const left = adLeft("recruit"); abar.style.width = (100 - (left / CONFIG.ads.recruit.durationSec) * 100) + "%"; setText(aline, `Campagne en cours : ${Math.ceil(left)} s`); }
@@ -102,7 +110,7 @@ export default {
       if (cands.length) r.append(el("p", "qlabel", "Profils à étudier"));
       for (const e of cands) {
         const c = el("div", "card emp cand");
-        c.innerHTML = `${avatar(e, "", "e:" + e.id)}<span class="pt"><span class="nm">${e.name}</span><span class="rl">${e.titre}</span>
+        c.innerHTML = `${avatar(e, "", "e:" + e.id)}<span class="pt"><span class="nm">${e.name}</span><span class="rl">${e.titre} · profil ${e.tier}/5</span>
           <span class="fx">${e.time} h · niveau ${e.skill} · salaire ${fmt2(e.salary)} EUR/s</span></span>`;
         const col = el("span", "btncol");
         const b = el("button", "btn small-btn", `Embaucher<br><small>${fmt(e.hire)} EUR</small>`);

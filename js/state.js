@@ -28,6 +28,8 @@ export function defaults() {
     office: 0,            // niveau du bureau : limite le nombre d'employes
     ads: { client: null, recruit: null },   // campagnes en cours : { end } (temps de jeu)
     candidates: [],       // profils proposes par les campagnes de recrutement
+    people: {},           // profils generes (employes qui ne sont pas dans data/employees.json)
+    nextPersonId: 1,
     photos: {},           // cle (client ou employe) -> photo, sans doublon
     attack: null,
     team: {

@@ -8,6 +8,7 @@ import { toast } from "./toast.js";
 import { clamp } from "./util.js";
 import { spawnTask, availableTypes, arrivalFactor } from "./tasks.js";
 import { service, payroll, freeStaff, serviceFor } from "./staff.js";
+import { DATA } from "./data.js";
 
 const C = CONFIG.clients, K = CONFIG.credibility;
 
@@ -29,7 +30,12 @@ export function makeOffer() {
   const [sid, sec] = pick(sectors);
   const taken = new Set([...state.clients, ...state.offers].map((x) => x.name));
   const free = sec.names.filter((n) => !taken.has(n));
-  const name = free.length ? pick(free) : pick(sec.names) + " " + (1 + Math.floor(Math.random() * 9));
+  let name = free.length && Math.random() < 0.5 ? pick(free) : null;
+  for (let k = 0; !name && k < 30; k++) {                         // nom genere : prefixe du secteur + nom de famille
+    const cand = `${sec.prefix ? sec.prefix + " " : ""}${pick(DATA.names.noms)}`;
+    if (!taken.has(cand)) name = cand;
+  }
+  if (!name) name = pick(sec.names) + " " + (1 + Math.floor(Math.random() * 9));
 
   // palier (rang) : ouvre avec l'argent gagne et la credibilite ; les rangs eleves sont favorises par reputation et villes
   const boost = 1 + state.reputation * CONFIG.prestige.repLargeBoost + state.city * 0.4;
@@ -82,8 +88,30 @@ export function removeClient(id, resigned) {
   if (resigned) emit("resign", c);
 }
 
+// Ce qui fait bouger la satisfaction d'un client en ce moment (par seconde) : total + causes lisibles
+export function satRate(c) {
+  const now = state.stats.playSeconds, sv = service(c), parts = [];
+  const dServ = (sv - 0.7) * C.serviceGain;
+  parts.push({ v: dServ, txt: sv >= 0.7 ? `service à ${Math.round(sv * 100)} %` : `service insuffisant (${Math.round(sv * 100)} %, il faut 70 %)` });
+  if (state.stress >= CONFIG.stress.max - 0.01) parts.push({ v: C.stressMaxPerSec, txt: "stress au maximum" });
+  else if (state.stress >= CONFIG.stress.highThreshold) parts.push({ v: C.stressHighPerSec, txt: "stress élevé" });
+  const late = state.queue.filter((t) => t.client === c.id && now - t.born > CONFIG.queue.overdueSec).length;
+  if (late) parts.push({ v: late * C.overduePerSec, txt: `${late} tâche${late > 1 ? "s" : ""} en retard` });
+  return { total: parts.reduce((a, p) => a + p.v, 0), parts };
+}
+
+// Arreter un contrat toi-meme : le client part sans proces, mais ta credibilite baisse un peu.
+export function terminateClient(id) {
+  const c = findClient(id);
+  if (!c) return false;
+  removeClient(id, false);
+  state.credibility = clamp(state.credibility + C.terminateCred, 0, 100);
+  sfx.tap();
+  toast(`Contrat arrêté avec ${c.name}.`);
+  return true;
+}
+
 function tick(dt) {
-  const now = state.stats.playSeconds;
   const types = availableTypes();
   let sumService = 0;
   for (let i = state.clients.length - 1; i >= 0; i--) {
@@ -96,11 +124,7 @@ function tick(dt) {
       if (ok.length) spawnTask(pick(ok), c.id, c.need.skill);
       c.nextTask = c.every * arrivalFactor() * (0.75 + Math.random() * 0.5);
     }
-    let d = (sv - 0.7) * C.serviceGain;
-    if (state.stress >= CONFIG.stress.max - 0.01) d += C.stressMaxPerSec;
-    else if (state.stress >= CONFIG.stress.highThreshold) d += C.stressHighPerSec;
-    for (const t of state.queue) if (t.client === c.id && now - t.born > CONFIG.queue.overdueSec) d += C.overduePerSec;
-    c.sat = clamp(c.sat + d * dt, 0, 100);
+    c.sat = clamp(c.sat + satRate(c).total * dt, 0, 100);
     earn(c.pay * payFactor(c.sat) * (0.5 + 0.5 * sv) * dt, 0);
     if (!c.happy && c.sat >= C.satisfied) { c.happy = true; state.stats.clientsSatisfied++; }
     if (c.sat <= 0) {

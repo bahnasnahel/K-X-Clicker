@@ -30,4 +30,6 @@ export function cleanPhotos() {
     ...state.staff.map((id) => "e:" + id), ...state.candidates.map((id) => "e:" + id),
   ]);
   for (const k of Object.keys(state.photos)) if (!keep.has(k)) delete state.photos[k];
+  const used = new Set([...state.staff, ...state.candidates]);               // profils generes qui ne servent plus
+  for (const id of Object.keys(state.people)) if (!used.has(id)) delete state.people[id];
 }

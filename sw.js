@@ -1,6 +1,6 @@
 // Service worker K'X Clicker : jeu complet hors ligne.
 // A CHAQUE MISE EN LIGNE, incremente VERSION pour forcer la mise a jour.
-const VERSION = "v8-0002";
+const VERSION = "v9-0001";
 const CACHE = "kx-" + VERSION;
 
 const FILES = [
@@ -10,7 +10,7 @@ const FILES = [
   "js/icons.js", "js/render.js", "js/ui.js", "js/toast.js", "js/bubbles.js", "js/tutorial.js", "js/offline.js", "js/cheat.js", "js/data.js", "js/unlocks.js", "js/staff.js", "js/lawsuit.js", "js/avatar.js", "js/ads.js",
   "js/taskdata.js", "js/tasks.js", "js/workflows.js", "js/clients.js", "js/crew.js", "js/prestige.js", "js/achievements.js",
   "js/tabs/tasks.js", "js/tabs/workflows.js", "js/tabs/clients.js", "js/tabs/team.js", "js/tabs/agency.js", "js/tabs/success.js",
-  "data/employees.json", "data/directors.json", "data/photos.json",
+  "data/employees.json", "data/directors.json", "data/photos.json", "data/names.json",
   "assets/photos/people/p1.webp", "assets/photos/people/p2.webp", "assets/photos/people/p3.webp", "assets/photos/people/p4.webp",
   "assets/fonts/press-start-2p.woff2", "assets/fonts/inter.woff2",
   "assets/photos/nahel.webp", "assets/photos/yanis.webp", "assets/photos/noah.webp", "assets/photos/jadd.webp",

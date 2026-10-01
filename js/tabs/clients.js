@@ -3,9 +3,9 @@ import { CONFIG } from "../config.js";
 import { state } from "../state.js";
 import { icon } from "../icons.js";
 import { sfx } from "../audio.js";
-import { modal, infoDialog } from "../modal.js";
+import { modal, infoDialog, confirmDialog } from "../modal.js";
 import { avatar } from "../avatar.js";
-import { signOffer, clientIncome, incomePerSec, previewService } from "../clients.js";
+import { signOffer, dropOffer, terminateClient, satRate, clientIncome, incomePerSec, previewService } from "../clients.js";
 import { staffList, assignedTo, timeGiven, skillGiven, service, assign, autoAssign, payroll } from "../staff.js";
 import { clientAdCost, isFirstAd, canClientAd, launchClientAd, adRunning, adLeft } from "../ads.js";
 
@@ -39,7 +39,10 @@ export default {
     this.view = liveView(root, sig, (r, live) => {
       const help = el("button", "helpbtn", "<i>?</i>"); help.setAttribute("aria-label", "Aide : crédibilité");
       help.onclick = () => { const [t, txt] = CONFIG.help.credibility; infoDialog(t, `<p>${txt}</p>`, "Compris"); };
+      const helpSat = el("button", "helpbtn", "<i>?</i>"); helpSat.setAttribute("aria-label", "Aide : satisfaction");
+      helpSat.onclick = () => { const [t, txt] = CONFIG.help.satisfaction; infoDialog(t, `<p>${txt}</p>`, "Compris"); };
       const head = el("div", "qhead", `<h2 class="h">Clients</h2><span class="qcount"></span>`);
+      head.append(helpSat);
       const cnt = head.querySelector(".qcount");
       live(() => setText(cnt, `${state.clients.length} client${state.clients.length > 1 ? "s" : ""}`));
       r.append(head);
@@ -90,6 +93,15 @@ export default {
       at.onclick = () => { state.autoAssign = !state.autoAssign; if (state.autoAssign) autoAssign(); sfx.tap(); };
       r.append(at);
 
+      // paliers de clients : conditions pour les voir arriver
+      const tiers = el("div", "card tiercard");
+      tiers.append(el("div", "credhead", "<b>Rangs de clients</b>"));
+      Object.entries(CONFIG.sizes).forEach(([k, z]) => {
+        const ok = state.runMoney >= z.minMoney && state.credibility >= z.minCred;
+        tiers.append(el("div", "tierrow " + (ok ? "ok" : "lock"), `<b>${z.label}</b><span>${ok ? "disponible" : `il faut ${fmt(z.minMoney)} EUR gagnés et ${z.minCred} % de crédibilité`}</span>`));
+      });
+      r.append(tiers);
+
       r.append(el("p", "qlabel", "Demandes de clients"));
       if (!state.offers.length) r.append(el("p", "muted", "Aucune demande pour le moment. Lance une campagne de publicité."));
       for (const o of state.offers) {
@@ -98,9 +110,12 @@ export default {
         c.insertAdjacentHTML("beforeend", avatar({}, "", "c:" + o.id));
         c.append(el("div", "cinfo", `<b>${o.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[o.size].label} · ${profil(o.profile || 1)}</span><span class="ctasks">${types(o.types)}</span>
           <span class="need">Besoin : ${o.need.time} h · niveau ${o.need.skill}</span><span class="serv ${servClass(sv)}">Service estimé avec ton équipe libre : ${pct(sv)}</span><span class="gold">${fmt2(o.pay)} EUR / s</span>`));
+        const col = el("span", "btncol");
         const b = el("button", "btn small-btn", "Signer");
         b.onclick = () => signOffer(o.id);
-        c.append(b);
+        const no = el("button", "btn small-btn ghost", "Refuser");
+        no.onclick = () => { dropOffer(o.id); sfx.tap(); };
+        col.append(b, no); c.append(col);
         r.append(c);
       }
 
@@ -111,19 +126,28 @@ export default {
         const who = assignedTo(cl.id);
         const c = el("div", "card client");
         c.innerHTML = `${avatar({}, "", "c:" + cl.id)}<div class="cinfo"><b>${cl.name}</b><span class="kind">${sec.label} · ${CONFIG.sizes[cl.size].label} · ${profil(cl.profile || 1)}</span><span class="ctasks">${types(cl.types)}</span>
-          <span class="need"></span><i class="bar svc"><b></b></i><span class="satline"></span>
+          <span class="need"></span><i class="bar svc"><b></b></i><span class="satline"></span><span class="evol"></span>
           <span class="staffrow">${who.map((p) => `<span class="chip2 busy">${p.isNahel ? "Toi" : p.prenom} · niv ${p.skill} · ${p.time} h</span>`).join("") || "<em>Personne d'affecté</em>"}</span></div>`;
+        const col = el("span", "btncol");
         const b = el("button", "btn small-btn", "Affecter");
         b.onclick = () => assignDialog(cl);
-        c.append(b);
-        const need = c.querySelector(".need"), bar = c.querySelector(".svc b"), line = c.querySelector(".satline");
+        const stop = el("button", "btn small-btn ghost", "Arrêter");
+        stop.onclick = async () => {
+          const ok = await confirmDialog("Arrêter le contrat ?", `${cl.name} partira et son abonnement s'arrêtera. Ta crédibilité baisse un peu (${CONFIG.clients.terminateCred}).`, "Arrêter");
+          if (ok) terminateClient(cl.id);
+        };
+        col.append(b, stop); c.append(col);
+        const need = c.querySelector(".need"), bar = c.querySelector(".svc b"), line = c.querySelector(".satline"), evol = c.querySelector(".evol");
         live(() => {
           const sv = service(cl);
           setText(need, `Temps ${fmt1(timeGiven(cl))}/${cl.need.time} h · niveau ${skillGiven(cl)}/${cl.need.skill} · service ${pct(sv)}`);
           need.className = "need serv " + servClass(sv);
           bar.style.width = sv * 100 + "%";
           bar.style.background = sv >= 0.9 ? "var(--v)" : sv >= 0.6 ? "var(--m)" : "#ff5d7a";
-          setText(line, `${mood(cl.sat)} · ${Math.round(cl.sat)} % · ${fmt2(clientIncome(cl))} EUR/s`);
+          setText(line, `${mood(cl.sat)} · satisfaction ${Math.round(cl.sat)} % · ${fmt2(clientIncome(cl))} EUR/s`);
+          const sr = satRate(cl), per = sr.total * 60;
+          setText(evol, `Évolution : ${per >= 0 ? "+" : "-"}${Math.abs(per).toFixed(1).replace(".", ",")} % par minute · ${sr.parts.map((p) => p.txt).join(", ")}${cl.sat < 25 ? " · RISQUE DE RÉSILIATION" : ""}`);
+          evol.className = "evol " + (sr.total >= 0 ? "up" : cl.sat < 25 ? "crit" : "down");
         });
         r.append(c);
       }

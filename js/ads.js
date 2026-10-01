@@ -5,7 +5,7 @@ import { addSystem } from "./loop.js";
 import { on } from "./events.js";
 import { sfx } from "./audio.js";
 import { toast } from "./toast.js";
-import { DATA } from "./data.js";
+import { DATA, getEmp } from "./data.js";
 import { makeOffer } from "./clients.js";
 import { cleanPhotos } from "./avatar.js";
 
@@ -18,7 +18,7 @@ export function clientAdCost() {
   if (isFirstAd()) return 0;
   return Math.round(A.client.cost * (1 + A.client.perClient * state.clients.length) * (1 + A.client.cityBonus * state.city));
 }
-export const recruitAdCost = () => Math.round(A.recruit.cost * (1 + A.recruit.cityBonus * state.city));
+export const recruitAdCost = (targeted = false) => Math.round(A.recruit.cost * (1 + A.recruit.cityBonus * state.city) * (targeted ? A.recruit.targetedMult : 1));
 
 // niveau maximal des profils propose selon la credibilite
 export function maxTier() {
@@ -26,12 +26,17 @@ export function maxTier() {
   A.recruit.tierCred.forEach((c, i) => { if (state.credibility >= c) t = i + 1; });
   return t;
 }
+// prochain niveau de profil a debloquer : { tier, cred } ou null
+export function nextTier() {
+  const t = maxTier();
+  return t < A.recruit.tierCred.length ? { tier: t + 1, cred: A.recruit.tierCred[t] } : null;
+}
 
 export const adLeft = (which) => (state.ads[which] ? Math.max(0, state.ads[which].end - state.stats.playSeconds) : 0);
 export const adRunning = (which) => !!state.ads[which];
 
 export function canClientAd() { return !adRunning("client") && state.offers.length < A.client.maxPending && state.money >= clientAdCost(); }
-export function canRecruitAd() { return !adRunning("recruit") && state.candidates.length < A.recruit.maxPending && state.money >= recruitAdCost() && state.staff.length < staffCapNow(); }
+export function canRecruitAd(targeted = false) { return !adRunning("recruit") && state.candidates.length < A.recruit.maxPending && state.money >= recruitAdCost(targeted) && state.staff.length < staffCapNow(); }
 const staffCapNow = () => CONFIG.office.levels[Math.min(state.office, CONFIG.office.levels.length - 1)].staff;
 
 export function launchClientAd() {
@@ -44,10 +49,10 @@ export function launchClientAd() {
   sfx.ok();
   return true;
 }
-export function launchRecruitAd() {
-  if (!canRecruitAd()) return false;
-  state.money -= recruitAdCost();
-  state.ads.recruit = { end: state.stats.playSeconds + A.recruit.durationSec };
+export function launchRecruitAd(targeted = false) {
+  if (!canRecruitAd(targeted)) return false;
+  state.money -= recruitAdCost(targeted);
+  state.ads.recruit = { end: state.stats.playSeconds + A.recruit.durationSec, targeted: !!targeted };
   sfx.ok();
   return true;
 }
@@ -65,19 +70,42 @@ function finishClientAd() {
   sfx.coin();
 }
 
-function finishRecruitAd() {
-  const t = maxTier();
-  const pool = DATA.employees.filter((e) => e.tier <= t && e.minCity <= state.city && !state.staff.includes(e.id) && !state.candidates.includes(e.id));
+// Cree un profil (stocke dans state.people) : meme tirage u pour le temps, la competence, l'embauche et le salaire.
+function generateEmployee(tier) {
+  const G = A.recruit.generator[tier - 1], N = DATA.names;
+  const u = Math.random(), lerp = (r, k = u) => r[0] + (r[1] - r[0]) * k;
+  const id = "g" + state.nextPersonId++;
+  const hireK = Math.min(1, Math.max(0, u + (Math.random() - 0.5) * 0.2));
+  const e = {
+    id, generated: true, tier, minCity: 0,
+    prenom: N.prenoms[Math.floor(Math.random() * N.prenoms.length)], nom: N.noms[Math.floor(Math.random() * N.noms.length)],
+    titre: N.titres[tier - 1][Math.floor(Math.random() * N.titres[tier - 1].length)],
+    time: Math.round(lerp(G.time)), skill: Math.round(lerp(G.skill)),
+    hire: Math.max(10, Math.round(lerp(G.hire, hireK) / 5) * 5), salary: +lerp(G.salary, hireK).toFixed(2),
+  };
+  e.name = `${e.prenom} ${e.nom}`;
+  state.people[id] = e;
+  return e;
+}
+
+function finishRecruitAd(targeted) {
+  const top = maxTier() + (targeted ? 1 : 0);
   let n = rnd(A.recruit.candidates) + (state.credibility >= A.recruit.bonusCred ? 1 : 0);
-  n = Math.min(n, A.recruit.maxPending - state.candidates.length, pool.length);
-  // on tire en favorisant les profils les plus forts permis par la credibilite
+  n = Math.min(n, A.recruit.maxPending - state.candidates.length);
+  let found = 0;
   for (let i = 0; i < n; i++) {
-    const weights = pool.map((e) => 1 + e.tier);
-    let r = Math.random() * weights.reduce((a, b) => a + b, 0), k = 0;
-    for (; k < pool.length - 1; k++) { if ((r -= weights[k]) < 0) break; }
-    state.candidates.push(pool.splice(k, 1)[0].id);
+    // niveau : favorise les plus hauts permis ; petite chance d'un niveau au-dessus
+    let allowed = Math.min(5, top + (Math.random() < A.recruit.luckyChance ? 1 : 0));
+    const weights = Array.from({ length: allowed }, (_, k) => (k + 1) * (k + 1));
+    let r = Math.random() * weights.reduce((a, b) => a + b, 0), tier = 1;
+    for (; tier < allowed; tier++) { if ((r -= weights[tier - 1]) < 0) break; }
+    // profil nomme (data/employees.json) de ce niveau, sinon profil genere
+    const named = DATA.employees.filter((e) => e.tier === tier && e.minCity <= state.city && !state.staff.includes(e.id) && !state.candidates.includes(e.id));
+    if (named.length && Math.random() < A.recruit.namedShare) state.candidates.push(named[Math.floor(Math.random() * named.length)].id);
+    else state.candidates.push(generateEmployee(tier).id);
+    found++;
   }
-  toast(n ? `Campagne terminée : ${n} profil${n > 1 ? "s" : ""} à étudier.` : "Campagne terminée : personne ne correspond pour le moment.");
+  toast(found ? `Campagne terminée : ${found} profil${found > 1 ? "s" : ""} à étudier.` : "Campagne terminée : liste pleine.");
   sfx.coin();
 }
 
@@ -85,7 +113,7 @@ let acc = 0;
 function tick(dt) {
   const now = state.stats.playSeconds;
   if (state.ads.client && now >= state.ads.client.end) { state.ads.client = null; finishClientAd(); }
-  if (state.ads.recruit && now >= state.ads.recruit.end) { state.ads.recruit = null; finishRecruitAd(); }
+  if (state.ads.recruit && now >= state.ads.recruit.end) { const t = state.ads.recruit.targeted; state.ads.recruit = null; finishRecruitAd(t); }
   acc += dt;
   if (acc >= 2) { acc = 0; cleanPhotos(); }
 }
