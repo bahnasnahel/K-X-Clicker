@@ -414,6 +414,7 @@ export const CONFIG = {
       { id: "officeDiscount", group: 1, label: "Direction et bureau moins chers", desc: "Réduction sur les améliorations du bureau et des dirigeants.", unit: "pct", per: 6, max: 10, cost: [2, 1.4] },
       { id: "autoSpeed",   group: 2, label: "Automatisations plus rapides", desc: "Vitesse de toutes les automatisations.",             unit: "pct", per: 10, max: 30, cost: [3, 1.3] },
       { id: "hoursGain",   group: 2, label: "Heures gagnées",        desc: "Plus d'heures gagnées par l'automatisation.",              unit: "pct", per: 8,  max: 30, cost: [3, 1.3] },
+      { id: "luck",        group: 2, label: "Chance",                desc: "Plus de profils et de clients rares, épiques et au-dessus.", unit: "pct", per: 15, max: 20, cost: [3, 1.3] },
       { id: "clientPay",   group: 2, label: "Clients plus rentables", desc: "Les abonnements des clients rapportent plus.",            unit: "pct", per: 6,  max: 30, cost: [3, 1.3] },
       { id: "taskGain",    group: 2, label: "Tâches mieux payées",   desc: "Gains d'argent des tâches faites à la main.",              unit: "pct", per: 8,  max: 30, cost: [2, 1.3] },
       { id: "loyalty",     group: 2, label: "Clients fidèles",       desc: "La satisfaction des clients baisse moins vite.",            unit: "pct", per: 8,  max: 10, cost: [3, 1.4] },
@@ -508,16 +509,22 @@ export const CONFIG = {
     ],
   },
 
-  // --- Collection d'employes : rarete des profils de recrutement ---
-  // chance : tirage ; timeMult : x temps ; skillAdd : + competence (max 10). Les profils de data/employees.json peuvent avoir "rarity": "legendaire".
+  // --- Rarete (employes recrutes ET clients) ---
+  // chance : % de tirage ; mult : bonus. Employes : temps et competence x mult (arrondis a 0,5, competence max 10) ;
+  // clients : l'abonnement x mult. Les profils de data/employees.json peuvent avoir "rarity": "legendaire" (ids ci-dessous).
   rarity: {
     list: [
-      { id: "commun",     label: "Commun",     chance: 0.68, timeMult: 1,    skillAdd: 0, color: "#b9a3ee" },
-      { id: "rare",       label: "Rare",       chance: 0.22, timeMult: 1.15, skillAdd: 0, color: "#4fa8ff" },
-      { id: "epique",     label: "Épique",     chance: 0.08, timeMult: 1.3,  skillAdd: 1, color: "#D36BFF" },
-      { id: "legendaire", label: "Légendaire", chance: 0.02, timeMult: 1.5,  skillAdd: 2, color: "#FFD479" },
+      { id: "commun",      label: "Commun",      chance: 60,  mult: 1,   color: "#b9a3ee" },
+      { id: "peu_commun",  label: "Peu commun",  chance: 25,  mult: 1.2, color: "#5cf0a0" },
+      { id: "rare",        label: "Rare",        chance: 10,  mult: 1.5, color: "#4fa8ff" },
+      { id: "epique",      label: "Épique",      chance: 3,   mult: 2,   color: "#D36BFF" },
+      { id: "legendaire",  label: "Légendaire",  chance: 1.5, mult: 5,   color: "#FFD479" },
+      { id: "mythique",    label: "Mythique",    chance: 0.4, mult: 10,  color: "#ff9f43" },
+      { id: "supreme",     label: "Suprême",     chance: 0.1, mult: 50,  color: "#ff5d7a" },
     ],
     ticketMin: "rare",          // un ticket de recrutement garantit au moins cette rarete
+    // Chance : le poids de chaque rarete est multiplie par (1 + chance)^rang (commun = rang 0). Sources : boutique (item "luck"), campagne ciblee.
+    targetedLuck: 0.5,          // bonus de chance d'une campagne de recrutement ciblee
   },
 
   // --- Missions : 3 a la fois, objectifs et recompenses calcules sur ta progression ---

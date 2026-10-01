@@ -5,7 +5,7 @@ import { addSystem } from "./loop.js";
 import { on } from "./events.js";
 import { sfx } from "./audio.js";
 import { toast } from "./toast.js";
-import { DATA, getEmp, rollRarity, rarityIdx, applyRarity, rarityDef } from "./data.js";
+import { DATA, getEmp, rollRarity, rarityIdx, applyRarity, rarityDef, luckNow } from "./data.js";
 import { makeOffer } from "./clients.js";
 import { cleanPhotos } from "./avatar.js";
 
@@ -76,7 +76,7 @@ function finishClientAd() {
 }
 
 // Cree un profil (stocke dans state.people) : meme tirage u pour le temps, la competence, l'embauche et le salaire.
-function generateEmployee(tier, minRarity = null) {
+function generateEmployee(tier, minRarity = null, luck = 0) {
   const G = A.recruit.generator[tier - 1], N = DATA.names;
   const u = Math.random(), lerp = (r, k = u) => r[0] + (r[1] - r[0]) * k;
   const id = "g" + state.nextPersonId++;
@@ -89,7 +89,7 @@ function generateEmployee(tier, minRarity = null) {
     hire: Math.max(10, Math.round(lerp(G.hire, hireK) / 5) * 5), salary: +lerp(G.salary, hireK).toFixed(2),
   };
   e.name = `${e.prenom} ${e.nom}`;
-  applyRarity(e, rollRarity(minRarity));          // rarete : bonus de temps et de competence
+  applyRarity(e, rollRarity(minRarity, luck));    // rarete : temps et competence x bonus
   state.people[id] = e;
   return e;
 }
@@ -112,12 +112,12 @@ function finishRecruitAd(targeted) {
     // profil nomme (data/employees.json) de ce niveau, sinon profil genere
     const named = DATA.employees.filter((e) => e.tier === tier && e.minCity <= state.city && !state.staff.includes(e.id) && !state.candidates.includes(e.id) && (!minR || rarityIdx(e.rarity) >= rarityIdx(minR)));
     let got;
-    if (named.length && Math.random() < A.recruit.namedShare) { got = named[Math.floor(Math.random() * named.length)]; state.candidates.push(got.id); state.album[got.id] = true; }   // l'album garde les profils trouves
-    else { got = generateEmployee(tier, minR); state.candidates.push(got.id); }
+    if (named.length && Math.random() < A.recruit.namedShare) { got = named[Math.floor(Math.random() * named.length)]; state.candidates.push(got.id); }
+    else { got = generateEmployee(tier, minR, luckNow(targeted)); state.candidates.push(got.id); }
     if (!best || rarityIdx(got.rarity) > rarityIdx(best.rarity)) best = got;
     found++;
   }
-  const star = best && rarityIdx(best.rarity) >= 2 ? ` Un profil ${rarityDef(best.rarity).label.toLowerCase()} : ${best.name} !` : "";
+  const star = best && rarityIdx(best.rarity) >= 3 ? ` Un profil ${rarityDef(best.rarity).label.toLowerCase()} : ${best.name} !` : "";
   toast(found ? `Campagne terminée : ${found} profil${found > 1 ? "s" : ""} à étudier.${star}` : "Campagne terminée : liste pleine.");
   sfx.coin();
 }
@@ -132,7 +132,4 @@ function tick(dt) {
 }
 
 on("agencyReset", () => { acc = 0; });
-export function initAds() {
-  for (const id of [...state.staff, ...state.candidates]) if (DATA.byId[id]) state.album[id] = true;   // saves anterieures : ces profils sont deja trouves
-  addSystem(tick);
-}
+export function initAds() { addSystem(tick); }

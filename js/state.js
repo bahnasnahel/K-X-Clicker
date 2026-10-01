@@ -65,7 +65,6 @@ export function defaults() {
     nextClientId: 1,
     nextPersonId: 1,
     nextEnemyId: 1,
-    album: {},            // collection d'employes : id du profil -> true (commune a l'entreprise, survit au licenciement et a la remise a zero)
     tickets: 0,           // tickets de recrutement : garantissent un profil rare ou mieux a la prochaine campagne
     streak: { last: "", count: 0, day: "" },   // serie de jours (date locale)
     golden: { next: 0, bonuses: [] },        // bonus dore : prochain passage, bonus en cours { kind, mult, until }

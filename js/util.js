@@ -42,5 +42,7 @@ export function liveView(root, getSig, build) {
 // ecrit un texte seulement s'il change
 export function setText(node, v) { if (node.textContent !== v) node.textContent = v; }
 
+// 4.5 -> "4,5" (valeurs arrondies a 0,5)
+export const fmtHalf = (n) => String(n).replace(".", ",");
 export const fmt1 = (n) => n.toFixed(1).replace(".", ",");
 export const fmt2 = (n) => n.toFixed(2).replace(".", ",");

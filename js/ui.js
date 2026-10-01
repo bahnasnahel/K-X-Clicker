@@ -10,6 +10,7 @@ import { startTutorial } from "./tutorial.js";
 import { openCheat, cheatActive, cheatLabel } from "./cheat.js";
 import { stressMult } from "./state.js";
 import { nextAgencyProgress } from "./agencies.js";
+import { initPanels, updatePanels } from "./panels.js";
 import { streakText } from "./streak.js";
 import { grabGolden, hitWindow, goldenHere, updatePills } from "./golden.js";
 import tasks from "./tabs/tasks.js";
@@ -60,6 +61,8 @@ export function initUI() {
   al.addEventListener("pointerdown", (e) => e.preventDefault());
   document.body.append(al);
   ui.alert = al;
+
+  initPanels();
 
   // vue complete du bureau : tape-le, ou tire vers le bas en haut de page ; on referme en defilant vers le bas ou en retapant
   const top = $("#top"), desk = $("#desk"), mainEl = $("#main");
@@ -144,6 +147,7 @@ export function updateUI() {
   }
 
   updatePills();
+  updatePanels();
 
   const on = cheatActive();
   ui.cheat.classList.toggle("hidden", !on);

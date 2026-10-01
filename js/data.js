@@ -20,7 +20,7 @@ export async function loadData() {
     DATA.photos = ph.photos;
     DATA.names = nm;
     // rarete : celle du fichier ("rarity"), sinon tiree une fois pour toutes a partir de l'id (toujours la meme)
-    DATA.employees = emp.employees.map((e) => applyRarity({ ...e, name: `${e.prenom} ${e.nom}`.trim() }, e.rarity || rollRarity(null, hash01(e.id))));
+    DATA.employees = emp.employees.map((e) => applyRarity({ ...e, name: `${e.prenom} ${e.nom}`.trim() }, e.rarity || rollRarity(null, 0, hash01(e.id))));
     DATA.byId = Object.fromEntries(DATA.employees.map((e) => [e.id, e]));
     for (const d of dir.directors) {
       if (!CONFIG.team[d.id]) continue;
@@ -32,22 +32,26 @@ export async function loadData() {
   }
 }
 
-// ---- Rarete des profils de recrutement (commun, rare, epique, legendaire) ----
+// ---- Rarete (employes et clients) : commun, peu commun, rare, epique, legendaire, mythique, supreme ----
 export const rarityDef = (id) => CONFIG.rarity.list.find((r) => r.id === id) || CONFIG.rarity.list[0];
 export const rarityIdx = (id) => Math.max(0, CONFIG.rarity.list.findIndex((r) => r.id === id));
-// tirage selon les chances ; minId : rarete minimale (ticket de recrutement)
-export function rollRarity(minId = null, rnd = Math.random()) {
-  const pool = CONFIG.rarity.list.slice(minId ? rarityIdx(minId) : 0);
-  let r = rnd * pool.reduce((s, x) => s + x.chance, 0);
-  for (const x of pool) if ((r -= x.chance) < 0) return x.id;
-  return pool[0].id;
+// chance : item "Chance" de la boutique (par x niveau), + celle d'une campagne ciblee
+export const luckNow = (targeted = false) => ((state.shop.luck || 0) * CONFIG.shop.items.find((i) => i.id === "luck").per) / 100 + (targeted ? CONFIG.rarity.targetedLuck : 0);
+// tirage : poids = chance x (1 + luck)^rang ; minId : rarete minimale (ticket de recrutement)
+export function rollRarity(minId = null, luck = 0, rnd = Math.random()) {
+  const L = CONFIG.rarity.list, from = minId ? rarityIdx(minId) : 0;
+  const w = L.map((x, i) => (i < from ? 0 : x.chance * Math.pow(1 + luck, i)));
+  let r = rnd * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < L.length; i++) if ((r -= w[i]) < 0) return L[i].id;
+  return L[from].id;
 }
-// la rarete donne un bonus de temps et de competence
+const half = (v) => Math.round(v * 2) / 2;                // arrondi a 0,5 pres
+// employe : temps et competence x bonus de la rarete (competence max 10)
 export function applyRarity(e, id) {
   const d = rarityDef(id);
   e.rarity = d.id;
-  e.time = Math.round(e.time * d.timeMult);
-  e.skill = Math.min(10, e.skill + d.skillAdd);
+  e.time = half(e.time * d.mult);
+  e.skill = Math.min(10, half(e.skill * d.mult));
   return e;
 }
 const hash01 = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return ((h >>> 0) % 10000) / 10000; };

@@ -1,13 +1,12 @@
-import { el, fmt, fmt1, fmt2, liveView, setText } from "../util.js";
+import { el, fmt, fmt1, fmt2, fmtHalf, liveView, setText } from "../util.js";
 import { CONFIG } from "../config.js";
 import { state, securityScore } from "../state.js";
 import { icon } from "../icons.js";
 import { sfx } from "../audio.js";
 import { modal, infoDialog, confirmDialog } from "../modal.js";
 import { avatar } from "../avatar.js";
-import { signOffer, dropOffer, terminateClient, satRate, clientIncome, incomePerSec, previewService, rankLabel } from "../clients.js";
+import { signOffer, dropOffer, terminateClient, satRate, clientIncome, incomePerSec, previewService, rankLabel, rarityTag, rarityCls } from "../clients.js";
 import { staffList, assignedTo, timeGiven, skillGiven, service, assign, autoAssign, payroll } from "../staff.js";
-import { renderMissions } from "../missions.js";
 import { clientAdCost, adIsFree, canClientAd, launchClientAd, adRunning, adLeft } from "../ads.js";
 
 const types = (list) => list.map((t) => `<span class="t-${t}">${icon(t, 16)}</span>`).join("");
@@ -24,7 +23,7 @@ function assignDialog(c) {
       const cur = state.assign[p.id], here = cur === c.id;
       const other = cur && !here ? state.clients.find((x) => x.id === cur) : null;
       const b = el("button", "opt-block" + (here ? " cur" : ""),
-        `<span class="optrow">${avatar(p, "", p.isDirector ? null : "e:" + p.id)}<span><b>${p.name || p.title}</b><span>${p.title} · ${p.time} h · niveau ${p.skill}${other ? " · chez " + other.name : here ? " · affecté ici" : ""}</span></span></span>`);
+        `<span class="optrow">${avatar(p, "", p.isDirector ? null : "e:" + p.id)}<span><b>${p.name || p.title}</b><span>${p.title} · ${fmtHalf(p.time)} h · niveau ${fmtHalf(p.skill)}${other ? " · chez " + other.name : here ? " · affecté ici" : ""}</span></span></span>`);
       b.onclick = () => { assign(p.id, c.id); sfx.ok(); close(); };
       box.append(b);
     }
@@ -36,7 +35,7 @@ export default {
   id: "clients", label: "Clients", icon: "clients",
   badge: () => state.offers.length > 0,
   mount(root) {
-    const sig = () => JSON.stringify([state.offers.map((o) => o.id), state.clients.map((c) => c.id), state.autoAssign, state.assign, state.staff, state.missions.list.map((m) => [m.id, m.done]), state.missions.swapAt <= state.stats.playSeconds, adRunning("client"), canClientAd(), clientAdCost(), state.team.nahel.lvl]);
+    const sig = () => JSON.stringify([state.offers.map((o) => o.id), state.clients.map((c) => c.id), state.autoAssign, state.assign, state.staff, adRunning("client"), canClientAd(), clientAdCost(), state.team.nahel.lvl]);
     this.view = liveView(root, sig, (r, live) => {
       const help = el("button", "helpbtn", "<i>?</i>"); help.setAttribute("aria-label", "Aide : crédibilité");
       help.onclick = () => { const [t, txt] = CONFIG.help.credibility; infoDialog(t, `<p>${txt}</p>`, "Compris"); };
@@ -60,14 +59,12 @@ export default {
       });
       r.append(cred);
 
-      renderMissions(r, live);
-
       // capacite de l'equipe : temps et competences disponibles / utilises
       const cap = el("div", "card capcard");
       const people = staffList();
       const total = people.reduce((t, p) => t + p.time, 0);
       cap.innerHTML = `<div class="credhead"><b>Ton équipe</b><span class="capval"></span></div><i class="bar"><b></b></i>
-        <div class="chips">${people.map((p) => `<span class="chip2 ${state.assign[p.id] ? "busy" : "free"}">${p.isNahel ? "Toi" : p.prenom} · niv ${p.skill} · ${p.time} h</span>`).join("")}</div>
+        <div class="chips">${people.map((p) => `<span class="chip2 ${state.assign[p.id] ? "busy" : "free"}">${p.isNahel ? "Toi" : p.prenom} · niv ${fmtHalf(p.skill)} · ${fmtHalf(p.time)} h</span>`).join("")}</div>
         <div class="fin">Plein = occupé, clair = disponible. Niveau = compétence.</div>`;
       const cbar = cap.querySelector(".bar b"), cval = cap.querySelector(".capval");
       live(() => {
@@ -112,8 +109,8 @@ export default {
       for (const o of [...state.offers].sort((a, b) => b.pay - a.pay)) {          // du plus rentable au moins rentable
         const sec = CONFIG.sectors[o.sector], sv = previewService(o);
         const c = el("div", "card client offer");
-        c.insertAdjacentHTML("beforeend", avatar({}, "", "c:" + o.id));
-        c.append(el("div", "cinfo", `<b>${o.name}</b><span class="kind">${sec.label} · ${rankLabel(o)} · ${profil(o.profile || 1)}</span><span class="ctasks">${types(o.types)}</span>
+        c.insertAdjacentHTML("beforeend", avatar({}, rarityCls(o), "c:" + o.id));
+        c.append(el("div", "cinfo", `<b>${o.name}</b><span class="kind">${sec.label} · ${rankLabel(o)}${rarityTag(o)} · ${profil(o.profile || 1)}</span><span class="ctasks">${types(o.types)}</span>
           <span class="need">Besoin : ${o.need.time} h · niveau ${o.need.skill}</span><span class="serv ${servClass(sv)}">Service estimé avec ton équipe libre : ${pct(sv)}</span><span class="gold">${fmt2(o.pay)} EUR / s</span>`));
         const col = el("span", "btncol");
         const b = el("button", "btn small-btn", "Signer");
@@ -130,9 +127,9 @@ export default {
         const sec = CONFIG.sectors[cl.sector];
         const who = assignedTo(cl.id);
         const c = el("div", "card client");
-        c.innerHTML = `${avatar({}, "", "c:" + cl.id)}<div class="cinfo"><b>${cl.name}</b><span class="kind">${sec.label} · ${rankLabel(cl)} · ${profil(cl.profile || 1)}</span><span class="ctasks">${types(cl.types)}</span>
+        c.innerHTML = `${avatar({}, rarityCls(cl), "c:" + cl.id)}<div class="cinfo"><b>${cl.name}</b><span class="kind">${sec.label} · ${rankLabel(cl)}${rarityTag(cl)} · ${profil(cl.profile || 1)}</span><span class="ctasks">${types(cl.types)}</span>
           <span class="need"></span><i class="bar svc"><b></b></i><span class="satline"></span><span class="evol"></span>
-          <span class="staffrow">${who.map((p) => `<span class="chip2 busy">${p.isNahel ? "Toi" : p.prenom} · niv ${p.skill} · ${p.time} h</span>`).join("") || "<em>Personne d'affecté</em>"}</span></div>`;
+          <span class="staffrow">${who.map((p) => `<span class="chip2 busy">${p.isNahel ? "Toi" : p.prenom} · niv ${fmtHalf(p.skill)} · ${fmtHalf(p.time)} h</span>`).join("") || "<em>Personne d'affecté</em>"}</span></div>`;
         const col = el("span", "btncol");
         const b = el("button", "btn small-btn", "Affecter");
         b.onclick = () => assignDialog(cl);

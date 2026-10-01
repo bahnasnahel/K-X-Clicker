@@ -8,7 +8,7 @@ import { toast } from "./toast.js";
 import { clamp } from "./util.js";
 import { spawnTask, availableTypes, arrivalFactor } from "./tasks.js";
 import { service, payroll, freeStaff, serviceFor } from "./staff.js";
-import { DATA } from "./data.js";
+import { DATA, rollRarity, rarityDef, luckNow } from "./data.js";
 
 const C = CONFIG.clients, K = CONFIG.credibility;
 
@@ -19,6 +19,9 @@ export const clientIncome = (c) => c.pay * payFactor(c.sat) * (0.5 + 0.5 * servi
 export const incomePerSec = () => state.clients.reduce((s, c) => s + clientIncome(c), 0);
 // libelle d'un rang : "PME Niv. 2"
 export const rankLabel = (o) => `${CONFIG.sizes[o.size].label} Niv. ${(o.lvl || 0) + 1}`;
+// rarete d'un client : " · Rare" (rien si commun) et classe de bordure de la photo
+export const rarityTag = (o) => (o.rarity && o.rarity !== "commun" ? ` · ${rarityDef(o.rarity).label}` : "");
+export const rarityCls = (o) => "rar-" + (o.rarity || "commun");
 export const findClient = (id) => state.clients.find((c) => c.id === id);
 
 // a quoi ressemblerait le service si on signait ce client avec le personnel libre
@@ -74,8 +77,9 @@ export function makeOffer() {
   skill = Math.max(1, Math.min(10, skill + state.city * N.skill + RL[lv].skill));
   const [t0, t1] = sz.timeRange;
   const time = Math.max(2, Math.round((t0 + u * (t1 - t0)) * (1 + state.city * N.time) * RL[lv].time));
-  const pay = +(sz.pay * RL[lv].pay * Math.pow(m, 1.4) * (1 + 0.5 * state.city)).toFixed(2);
-  return { id: state.nextClientId++, sector: sid, name, size, lvl: lv, pay, every: sz.taskEverySec, types: sec.tasks, need: { time, skill }, profile: +m.toFixed(2) };
+  const rar = rollRarity(null, luckNow());                      // rarete : l'abonnement x bonus
+  const pay = +(sz.pay * RL[lv].pay * Math.pow(m, 1.4) * (1 + 0.5 * state.city) * rarityDef(rar).mult).toFixed(2);
+  return { id: state.nextClientId++, sector: sid, name, size, lvl: lv, rarity: rar, pay, every: sz.taskEverySec, types: sec.tasks, need: { time, skill }, profile: +m.toFixed(2) };
 }
 
 export function signOffer(id) {

@@ -113,14 +113,14 @@ function tick(dt) {
   for (const m of MS.list) {
     if (m.done) continue;
     if (m.type === "sat100" && happy) m.p = 1;
-    if (progressOf(m) >= m.goal) { m.done = true; sfx.ok(); toast(`Mission accomplie : ${describe(m)}. Réclame ta récompense dans l'onglet Clients.`); }
+    if (progressOf(m) >= m.goal) { m.done = true; sfx.ok(); toast(`Mission accomplie : ${describe(m)}. Réclame ta récompense dans Quêtes.`); }
   }
 }
 export function initMissions() { addSystem(tick); }
 
-// ---- affichage (dans l'onglet Clients) ----
+// ---- affichage (dans le panneau « Quetes » du haut de l'ecran, voir panels.js) ----
+export const missionsSig = () => JSON.stringify([state.missions.list.map((m) => [m.id, m.done]), state.missions.swapAt <= state.stats.playSeconds]);
 export function renderMissions(r, live) {
-  r.append(el("p", "qlabel", "Missions"));
   state.missions.list.forEach((m, i) => {
     const c = el("div", "card mission" + (m.done ? " done" : ""));
     c.innerHTML = `<span class="cinfo"><b>${describe(m)}</b><span class="sdesc">Récompense : ${rewardText(m)}</span><i class="bar"><b></b></i><span class="satline"></span></span>`;
